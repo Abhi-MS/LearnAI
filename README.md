@@ -6,6 +6,8 @@ LearnAI is a daily learning app for developers who rely on AI tools and want to 
 
 - Session 1 — scaffolded the project blueprint, baseline README, and CI-ready Next.js + TypeScript foundation; marked M1 as complete.
 - Session 2 — fixed the React/Vitest JSX runtime issue by importing React in the test and revalidated the lint + test pipeline.
+- Session 3 — defined the core Postgres schema for tracks, users, topics, sessions, quiz results, and concept gaps, and added the migration baseline for M2.
+- Session 4 — added the Supabase environment template, shared DB client helper, and a health-check route that verifies the database is reachable before the app goes further into auth/profile work.
 
 ## Getting started
 

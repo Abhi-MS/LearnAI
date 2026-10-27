@@ -16,7 +16,7 @@ LearnAI is a daily learning app for developers who rely on AI tools and want to 
 ## Milestone checklist
 
 - [x] M1 Scaffold + CI
-- [ ] M2 Data model (users, tracks, topics, sessions, quiz results) + migrations
+- [x] M2 Data model (users, tracks, topics, sessions, quiz results) + migrations
 - [ ] M3 Auth + profile (track selection)
 - [ ] M4 Topic picker + custom topic input
 - [ ] M5 Tutor chat (streaming, level-aware system prompt)
