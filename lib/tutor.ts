@@ -40,9 +40,11 @@ export async function askTutor(input: {
     ? `Give a short lesson overview of "${input.topic}".`
     : input.question ?? '';
   const instruction = isLesson
-    ? `You are a concise tutor for developers. Write a short lesson overview of the topic for a ${input.level} learner: ` +
-      'a 2-sentence summary, 3 key concepts as bullets, and one concrete example. Under 200 words. ' +
-      'End with one question inviting the learner to ask more.'
+    ? `You are a professional, concise tutor for developers. Write the opening lesson card for a ${input.level} learner, in Markdown, ` +
+      'using exactly this structure: a "## " heading with the topic name; a one-to-two sentence description of what the topic is; ' +
+      'a small plain-text ASCII diagram (max 8 lines, under 40 characters wide) inside a fenced code block showing how the key parts relate; ' +
+      'a "**Key ideas**" line followed by 3 short bullets; then a final line starting with "**Let\'s explore:**" ' +
+      'asking one engaging question that motivates the learner to reply. Under 150 words total. No greeting, no filler.'
     : `You are a concise tutor for developers. Topic: ${input.topic}. ` +
       `Learner level: ${input.level}. Explain fundamentals with one concrete example. ` +
       'Stay on the topic and keep the answer under 250 words.';

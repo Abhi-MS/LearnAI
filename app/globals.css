@@ -307,6 +307,112 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.bubble-tutor:has(.markdown) {
+  white-space: normal;
+  max-width: 100%;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+.markdown p {
+  margin: 0.5rem 0;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.markdown li {
+  margin: 0.2rem 0;
+}
+
+.markdown strong {
+  color: #fff;
+}
+
+.markdown code {
+  padding: 0.1rem 0.35rem;
+  background: rgba(124, 140, 255, 0.15);
+  border-radius: 5px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.markdown pre {
+  margin: 0.6rem 0;
+  padding: 0.7rem 0.85rem;
+  overflow-x: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  line-height: 1.35;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.8rem;
+  white-space: pre;
+}
+
+.markdown a {
+  color: var(--accent);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.markdown th,
+.markdown td {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+}
+
+.messages,
+.markdown pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.messages::-webkit-scrollbar,
+.markdown pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.messages::-webkit-scrollbar-track,
+.markdown pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb,
+.markdown pre::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
 .bubble-user {
   align-self: flex-end;
   background: rgba(124, 140, 255, 0.25);

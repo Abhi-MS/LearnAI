@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Level } from "../lib/levels";
 
 const MAX_QUESTION_LENGTH = 500;
@@ -55,8 +57,13 @@ export default function TutorPanel({
     }
   }
 
+  const startedRef = useRef(false);
+
   // The panel is re-mounted per topic, so this loads one lesson overview per open
   useEffect(() => {
+    // Strict Mode runs effects twice in dev; the ref keeps it to one request
+    if (startedRef.current) return;
+    startedRef.current = true;
     if (topic) load({ topic, level, mode: "lesson" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -103,7 +110,13 @@ export default function TutorPanel({
           <div className="messages" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={`bubble bubble-${m.role}`}>
-                {m.text}
+                {m.role === "tutor" ? (
+                  <div className="markdown">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  m.text
+                )}
               </div>
             ))}
             {loading && <div className="bubble bubble-tutor typing">Thinking…</div>}
