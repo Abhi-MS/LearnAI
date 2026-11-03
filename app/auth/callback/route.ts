@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
 
   if (code) {
-    const { error } = await createSupabaseServerClient().auth.exchangeCodeForSession(code);
+    const { error } = await (await createSupabaseServerClient()).auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}/`);
   }
 

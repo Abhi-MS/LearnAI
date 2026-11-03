@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 const LEVELS: TutorLevel[] = ['Beginner', 'Advanced', 'Pro', 'Job Ready'];
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
     return NextResponse.json({ error: 'Please sign in to use the tutor.' }, { status: 401 });

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { checkDatabaseHealth } from '../../../../lib/db';
 
 export async function GET() {
@@ -10,13 +11,7 @@ export async function GET() {
       { status: ok ? 200 : 503 },
     );
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        database: 'supabase',
-        error: error instanceof Error ? error.message : 'Database unavailable',
-      },
-      { status: 503 },
-    );
+    Sentry.captureException(error);
+    return NextResponse.json({ ok: false, database: 'supabase' }, { status: 503 });
   }
 }
