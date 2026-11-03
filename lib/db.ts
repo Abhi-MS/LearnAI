@@ -10,7 +10,16 @@ export function getPool() {
   }
 
   if (!pool) {
-    pool = new Pool({ connectionString, max: 5 });
+    // Supabase poolers present a certificate chain Node doesn't trust by default.
+    // sslmode in the URL would override the ssl option, so strip it.
+    const isSupabase = /supabase\.(com|co)/.test(connectionString);
+    pool = new Pool({
+      connectionString: isSupabase
+        ? connectionString.replace(/([?&])sslmode=[^&]*&?/, "$1").replace(/[?&]$/, "")
+        : connectionString,
+      max: 5,
+      ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+    });
   }
 
   return pool;
