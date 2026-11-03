@@ -86,7 +86,7 @@ h3 {
 
 .track-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -157,6 +157,10 @@ h3 {
 }
 
 .topic-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   width: 100%;
   text-align: left;
   padding: 0.5rem 0.75rem;
@@ -176,22 +180,76 @@ h3 {
   background: rgba(124, 140, 255, 0.12);
 }
 
-.tutor {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background: var(--surface);
+.level-chip {
+  flex-shrink: 0;
+  padding: 0.1rem 0.55rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
-.tutor-header {
+body {
+  transition: padding-right 0.3s ease;
+}
+
+/* On wide screens the whole page makes room, keeping content centered in the remaining space */
+@media (min-width: 1000px) {
+  body:has(.drawer.open) {
+    padding-right: 420px;
+  }
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 2.5rem 1rem 3rem;
+  }
+
+  .drawer-header,
+  .messages {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .composer {
+    padding: 0.75rem 1rem 1rem;
+  }
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0.3s;
+}
+
+.drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.drawer-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.tutor-header h2 {
-  margin: 0;
+.drawer-header h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
 }
 
 .link-button {
@@ -200,28 +258,23 @@ h3 {
   color: var(--muted);
   cursor: pointer;
   font: inherit;
-}
-
-.tutor-form {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  font-size: 1.1rem;
 }
 
 .level-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .chip-button {
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.7rem;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--muted);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
 }
 
@@ -231,15 +284,62 @@ h3 {
   background: rgba(124, 140, 255, 0.15);
 }
 
+.messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+
+.bubble {
+  max-width: 92%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.93rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bubble-tutor {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bubble-user {
+  align-self: flex-end;
+  background: rgba(124, 140, 255, 0.25);
+}
+
+.bubble-error {
+  align-self: flex-start;
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+}
+
+.typing {
+  color: var(--muted);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.composer {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  padding: 0.75rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
 textarea {
-  width: 100%;
-  padding: 0.75rem;
+  flex: 1;
+  padding: 0.6rem 0.75rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
   font: inherit;
-  resize: vertical;
+  resize: none;
 }
 
 textarea:focus-visible,
@@ -248,14 +348,8 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-.tutor-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .primary {
-  padding: 0.55rem 1.25rem;
+  padding: 0.55rem 1.1rem;
   background: var(--accent);
   border: none;
   border-radius: 10px;
@@ -268,12 +362,4 @@ button:focus-visible {
 .primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.answer {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  white-space: pre-wrap;
 }

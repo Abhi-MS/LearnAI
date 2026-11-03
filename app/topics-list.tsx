@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import TutorPanel from "./tutor-panel";
+import { LEVELS, type Level } from "../lib/levels";
 
 type Track = {
   slug: string;
@@ -9,12 +10,24 @@ type Track = {
   topics: { slug: string; title: string }[];
 };
 
+type SelectedTopic = { slug: string; title: string };
+
+const STORAGE_KEY = "learnai:levels";
+
 export default function TopicsList() {
   const [tracks, setTracks] = useState<Track[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<SelectedTopic | null>(null);
+  // Levels are read from the browser for now; a grader will set them once quizzes exist
+  const [levels, setLevels] = useState<Record<string, Level>>({});
 
   useEffect(() => {
+    try {
+      setLevels(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"));
+    } catch {
+      setLevels({});
+    }
+
     fetch("/api/topics")
       .then((res) =>
         res.ok ? res.json() : Promise.reject(new Error(String(res.status))),
@@ -48,10 +61,11 @@ export default function TopicsList() {
                 <li key={topic.slug}>
                   <button
                     type="button"
-                    className={`topic-button${selected === topic.title ? " active" : ""}`}
-                    onClick={() => setSelected(topic.title)}
+                    className={`topic-button${selected?.slug === topic.slug ? " active" : ""}`}
+                    onClick={() => setSelected(topic)}
                   >
-                    {topic.title}
+                    <span>{topic.title}</span>
+                    <span className="level-chip">{levels[topic.slug] ?? LEVELS[0]}</span>
                   </button>
                 </li>
               ))}
@@ -59,11 +73,13 @@ export default function TopicsList() {
           </section>
         ))}
       </div>
-      {selected ? (
-        <TutorPanel key={selected} topic={selected} onClose={() => setSelected(null)} />
-      ) : (
-        <p className="status">Select a topic to start a tutoring session.</p>
-      )}
+      {!selected && <p className="status">Select a topic to start a tutoring session.</p>}
+      <TutorPanel
+        key={selected?.slug ?? "closed"}
+        topic={selected?.title ?? null}
+        level={selected ? levels[selected.slug] ?? LEVELS[0] : LEVELS[0]}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }

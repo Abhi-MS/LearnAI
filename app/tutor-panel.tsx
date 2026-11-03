@@ -1,97 +1,132 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import type { Level } from "../lib/levels";
 
-const LEVELS = ["Beginner", "Advanced", "Pro", "Job Ready"];
 const MAX_QUESTION_LENGTH = 500;
+
+type Message = { role: "tutor" | "user" | "error"; text: string };
+
+async function callTutor(body: Record<string, string>) {
+  const res = await fetch("/api/tutor", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      res.status === 429
+        ? "Daily tutor limit reached. Try again tomorrow."
+        : data.error ?? "Tutor unavailable right now.",
+    );
+  }
+  return data.answer as string;
+}
 
 export default function TutorPanel({
   topic,
+  level,
   onClose,
 }: {
-  topic: string;
+  topic: string | null;
+  level: Level;
   onClose: () => void;
 }) {
-  const [level, setLevel] = useState(LEVELS[0]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+  const open = topic !== null;
 
-  async function ask(event: React.FormEvent) {
-    event.preventDefault();
-    if (!question.trim() || loading) return;
-
+  async function load(request: Record<string, string>, userText?: string) {
     setLoading(true);
-    setError("");
-    setAnswer("");
-
+    if (userText) setMessages((m) => [...m, { role: "user", text: userText }]);
     try {
-      const res = await fetch("/api/tutor", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ topic, level, question }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(
-          res.status === 429
-            ? "Daily tutor limit reached. Try again tomorrow."
-            : data.error ?? "Tutor unavailable right now.",
-        );
-      } else {
-        setAnswer(data.answer);
-      }
-    } catch {
-      setError("Tutor unavailable right now.");
+      const answer = await callTutor(request);
+      setMessages((m) => [...m, { role: "tutor", text: answer }]);
+    } catch (error) {
+      setMessages((m) => [
+        ...m,
+        { role: "error", text: error instanceof Error ? error.message : "Tutor unavailable right now." },
+      ]);
     } finally {
       setLoading(false);
     }
   }
 
+  // The panel is re-mounted per topic, so this loads one lesson overview per open
+  useEffect(() => {
+    if (topic) load({ topic, level, mode: "lesson" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  function ask(event: React.FormEvent) {
+    event.preventDefault();
+    const text = question.trim();
+    if (!text || loading || !topic) return;
+    setQuestion("");
+    load({ topic, level, question: text }, text);
+  }
+
   return (
-    <section className="tutor" aria-label={`Tutor for ${topic}`}>
-      <div className="tutor-header">
-        <h2>{topic}</h2>
-        <button type="button" className="link-button" onClick={onClose}>
-          Close
-        </button>
-      </div>
-
-      <form onSubmit={ask} className="tutor-form">
-        <div className="level-row" role="radiogroup" aria-label="Level">
-          {LEVELS.map((l) => (
-            <button
-              key={l}
-              type="button"
-              role="radio"
-              aria-checked={level === l}
-              className={`chip-button${level === l ? " active" : ""}`}
-              onClick={() => setLevel(l)}
-            >
-              {l}
+    <aside
+      className={`drawer${open ? " open" : ""}`}
+      aria-hidden={!open}
+      aria-label={topic ? `Tutor for ${topic}` : "Tutor"}
+    >
+      {topic && (
+        <>
+          <header className="drawer-header">
+            <div>
+              <h2>{topic}</h2>
+              <span className="level-chip" aria-label={`Current level: ${level}`}>
+                {level}
+              </span>
+            </div>
+            <button type="button" className="link-button" onClick={onClose} aria-label="Close tutor">
+              ✕
             </button>
-          ))}
-        </div>
-        <textarea
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          maxLength={MAX_QUESTION_LENGTH}
-          rows={3}
-          placeholder={`Ask anything about ${topic}…`}
-        />
-        <div className="tutor-actions">
-          <span className="status">
-            {question.length}/{MAX_QUESTION_LENGTH}
-          </span>
-          <button type="submit" className="primary" disabled={loading || !question.trim()}>
-            {loading ? "Thinking…" : "Ask tutor"}
-          </button>
-        </div>
-      </form>
+          </header>
 
-      {error && <p className="status status-error">{error}</p>}
-      {answer && <div className="answer">{answer}</div>}
-    </section>
+          <div className="messages" aria-live="polite">
+            {messages.map((m, i) => (
+              <div key={i} className={`bubble bubble-${m.role}`}>
+                {m.text}
+              </div>
+            ))}
+            {loading && <div className="bubble bubble-tutor typing">Thinking…</div>}
+            <div ref={endRef} />
+          </div>
+
+          <form onSubmit={ask} className="composer">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) ask(e);
+              }}
+              maxLength={MAX_QUESTION_LENGTH}
+              rows={2}
+              placeholder={`Ask about ${topic}…`}
+            />
+            <button type="submit" className="primary" disabled={loading || !question.trim()}>
+              Send
+            </button>
+          </form>
+        </>
+      )}
+    </aside>
   );
 }

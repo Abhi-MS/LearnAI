@@ -18,7 +18,9 @@ export async function POST(request: Request) {
   const question = typeof body?.question === 'string' ? body.question.trim() : '';
   const level: TutorLevel = LEVELS.includes(body?.level) ? body.level : 'Beginner';
 
-  if (!topic || !question) {
+  const mode = body?.mode === 'lesson' ? 'lesson' : 'chat';
+
+  if (!topic || (mode === 'chat' && !question)) {
     return NextResponse.json({ error: 'topic and question are required' }, { status: 400 });
   }
   if (topic.length > MAX_TOPIC_LENGTH || question.length > MAX_QUESTION_LENGTH) {
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { answer } = await askTutor({ topic, level, question });
+    const { answer } = await askTutor({ topic, level, question, mode });
     return NextResponse.json({ answer });
   } catch (error) {
     if (error instanceof TutorLimitError) {
