@@ -9,7 +9,32 @@ vi.mock('@google/genai', () => ({
   GoogleGenAI: vi.fn().mockImplementation(() => ({ models: { generateContent } })),
 }));
 
+vi.mock('../../../lib/supabase-server', () => ({
+  createSupabaseServerClient: () => ({
+    auth: { getUser: async () => ({ data: { user: authedUser } }) },
+  }),
+}));
+
+let authedUser: { id: string } | null = { id: 'user-1' };
+
 describe('POST /api/tutor', () => {
+  it('rejects signed-out requests', async () => {
+    authedUser = null;
+    generateContent.mockClear();
+    const { POST } = await import('./route');
+
+    const response = await POST(
+      new Request('http://localhost/api/tutor', {
+        method: 'POST',
+        body: JSON.stringify({ topic: 't', question: 'q' }),
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(generateContent).not.toHaveBeenCalled();
+    authedUser = { id: 'user-1' };
+  });
+
   it('caps output tokens and returns the answer', async () => {
     process.env.GEMINI_API_KEY = 'test-key';
     const { POST } = await import('./route');

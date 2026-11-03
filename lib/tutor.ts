@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import * as Sentry from '@sentry/nextjs';
-import { createDailyLimiter } from './limiter';
+import { createDailyLimiter, createKeyedDailyLimiter } from './limiter';
 
 export const MAX_OUTPUT_TOKENS = 600;
 export const MAX_TOPIC_LENGTH = 120;
@@ -8,7 +8,9 @@ export const MAX_QUESTION_LENGTH = 500;
 
 const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
 
-const consumeDaily = createDailyLimiter(Number(process.env.TUTOR_DAILY_REQUEST_LIMIT ?? 100));
+// Global cap protects the API budget; the per-user cap keeps one user from using it all up
+const consumeGlobal = createDailyLimiter(Number(process.env.TUTOR_DAILY_REQUEST_LIMIT ?? 100));
+const consumeUser = createKeyedDailyLimiter(Number(process.env.TUTOR_USER_DAILY_LIMIT ?? 30));
 
 export class TutorLimitError extends Error {}
 
@@ -18,6 +20,7 @@ export type TutorLevel = 'Beginner' | 'Advanced' | 'Pro' | 'Job Ready';
 const lessonCache = new Map<string, string>();
 
 export async function askTutor(input: {
+  userId: string;
   topic: string;
   level: TutorLevel;
   question?: string;
@@ -33,7 +36,10 @@ export async function askTutor(input: {
     if (cached) return { answer: cached, usage: undefined };
   }
 
-  if (!consumeDaily()) throw new TutorLimitError('Daily tutor limit reached.');
+  if (!consumeUser(input.userId)) {
+    throw new TutorLimitError('Daily tutor limit reached. Try again tomorrow.');
+  }
+  if (!consumeGlobal()) throw new TutorLimitError('Tutor is at capacity today. Try again tomorrow.');
 
   const ai = new GoogleGenAI({ apiKey });
   const contents = isLesson

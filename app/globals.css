@@ -32,6 +32,48 @@ main {
   padding: 4rem 1.5rem 5rem;
 }
 
+.signin-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.signin-page .lead {
+  margin: 0 0 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.auth-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.2rem;
+  font-size: 0.9rem;
+}
+
+.auth-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
 h1 {
   font-size: clamp(2.5rem, 6vw, 4rem);
   line-height: 1.1;

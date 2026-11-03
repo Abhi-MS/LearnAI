@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { createSupabaseServerClient } from '../../../lib/supabase-server';
 import {
   askTutor,
   MAX_QUESTION_LENGTH,
@@ -13,6 +14,12 @@ export const dynamic = 'force-dynamic';
 const LEVELS: TutorLevel[] = ['Beginner', 'Advanced', 'Pro', 'Job Ready'];
 
 export async function POST(request: Request) {
+  const supabase = createSupabaseServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return NextResponse.json({ error: 'Please sign in to use the tutor.' }, { status: 401 });
+  }
+
   const body = await request.json().catch(() => null);
   const topic = typeof body?.topic === 'string' ? body.topic.trim() : '';
   const question = typeof body?.question === 'string' ? body.question.trim() : '';
@@ -28,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { answer } = await askTutor({ topic, level, question, mode });
+    const { answer } = await askTutor({ userId: auth.user.id, topic, level, question, mode });
     return NextResponse.json({ answer });
   } catch (error) {
     if (error instanceof TutorLimitError) {
