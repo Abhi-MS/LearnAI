@@ -18,3 +18,8 @@ LearnAI is a daily learning app for developers who rely on AI tools and want to 
 ## Roadmap
 
 See [BLUEPRINT.md](BLUEPRINT.md) for the full milestone plan and design rules.
+
+## MCP server
+
+
+pm run mcp starts a read-only stdio MCP server (tools: `list_tracks`, `list_topics`) backed by the same Postgres data as the app. Tool calls are capped per day via `MCP_DAILY_CALL_LIMIT` (default 500), and `list_topics` returns at most 25 topics per call. Example client config: `{ \"command\": \"npx\", \"args\": [\"tsx\", \"mcp/index.ts\"], \"cwd\": \"<repo path>\" }`.

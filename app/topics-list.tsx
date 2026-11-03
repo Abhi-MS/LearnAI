@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import TutorPanel from "./tutor-panel";
 
 type Track = {
   slug: string;
@@ -11,6 +12,7 @@ type Track = {
 export default function TopicsList() {
   const [tracks, setTracks] = useState<Track[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/topics")
@@ -36,17 +38,32 @@ export default function TopicsList() {
   }
 
   return (
-    <div className="track-grid">
-      {tracks.map((track) => (
-        <section key={track.slug} className={`card track-${track.slug}`}>
-          <h3>{track.name}</h3>
-          <ul className="topic-list">
-            {track.topics.map((topic) => (
-              <li key={topic.slug}>{topic.title}</li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="track-grid">
+        {tracks.map((track) => (
+          <section key={track.slug} className={`card track-${track.slug}`}>
+            <h3>{track.name}</h3>
+            <ul className="topic-list">
+              {track.topics.map((topic) => (
+                <li key={topic.slug}>
+                  <button
+                    type="button"
+                    className={`topic-button${selected === topic.title ? " active" : ""}`}
+                    onClick={() => setSelected(topic.title)}
+                  >
+                    {topic.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+      {selected ? (
+        <TutorPanel key={selected} topic={selected} onClose={() => setSelected(null)} />
+      ) : (
+        <p className="status">Select a topic to start a tutoring session.</p>
+      )}
+    </>
   );
 }
