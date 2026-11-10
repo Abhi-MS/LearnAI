@@ -15,6 +15,11 @@ LearnAI is a daily learning app for developers who rely on AI tools and want to 
 2. Run the app locally with `npm run dev`.
 3. Run lint and tests with `npm run lint` and `npm run test -- --run`.
 
+Apply the SQL migrations in `db/migrations` in order to the Supabase database.
+Migration 003 is required for custom topics and references Supabase's `auth.users`.
+Signed-in users can add private topics under an existing category or create a new
+category; these topics follow their account across devices.
+
 ## Roadmap
 
 See [BLUEPRINT.md](BLUEPRINT.md) for the full milestone plan and design rules.

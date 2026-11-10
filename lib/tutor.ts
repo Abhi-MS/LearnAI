@@ -1,9 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import * as Sentry from '@sentry/nextjs';
 import { createDailyLimiter, createKeyedDailyLimiter } from './limiter';
+import { MAX_TOPIC_LENGTH } from './topic-limits';
+
+export { MAX_TOPIC_LENGTH } from './topic-limits';
 
 export const MAX_OUTPUT_TOKENS = 600;
-export const MAX_TOPIC_LENGTH = 120;
 export const MAX_QUESTION_LENGTH = 500;
 
 const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';

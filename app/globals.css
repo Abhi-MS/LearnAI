@@ -132,6 +132,67 @@ h3 {
   gap: 1rem;
 }
 
+.custom-topic-form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.custom-topic-description {
+  margin: -0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.custom-topic-form label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.custom-topic-form input,
+.custom-topic-form select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+}
+
+.custom-topic-form select option {
+  background: var(--surface);
+}
+
+.custom-topic-form input::placeholder {
+  color: var(--muted);
+}
+
+.custom-topic-form input:focus-visible,
+.custom-topic-form select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.custom-topic-form input:disabled,
+.custom-topic-form select:disabled {
+  opacity: 0.6;
+}
+
+.custom-topic-form .status,
+.custom-topic-success {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.custom-topic-success {
+  color: var(--devops);
+}
+
+.custom-topic-form button {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
 .card {
   --track-color: var(--accent);
   background: var(--surface);
@@ -145,6 +206,10 @@ h3 {
 .card:hover {
   transform: translateY(-3px);
   border-color: var(--track-color);
+}
+
+.custom-topic-card:hover {
+  transform: none;
 }
 
 .track-frontend {
