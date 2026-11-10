@@ -4,12 +4,14 @@ import { z } from 'zod';
 import { getPool } from '../../../lib/db';
 import { createSupabaseServerClient } from '../../../lib/supabase-server';
 import { MAX_CATEGORY_LENGTH, MAX_TOPIC_LENGTH } from '../../../lib/topic-limits';
+import { ensureCategory, withUserLearningTransaction } from '../../../lib/learning';
 
 export const dynamic = 'force-dynamic';
 
 const customTopicSchema = z.object({
   title: z.string().trim().min(1).max(MAX_TOPIC_LENGTH),
   category: z.string().trim().min(1).max(MAX_CATEGORY_LENGTH),
+  areaId: z.uuid(),
 });
 
 export async function GET() {
@@ -48,17 +50,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await getPool().query(
-      `INSERT INTO custom_topics (user_id, category, title)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, lower(btrim(category)), lower(btrim(title))) DO NOTHING
-       RETURNING id, category, title`,
-      [user.id, parsed.data.category, parsed.data.title],
-    );
-    if (result.rows.length === 0) {
+    const result = await withUserLearningTransaction(user.id, async (client) => {
+      const area = await client.query('SELECT id FROM learning_areas WHERE id = $1 AND user_id = $2', [parsed.data.areaId, user.id]);
+      if (!area.rows.length) return null;
+      const category = await ensureCategory(client, user.id, parsed.data.areaId, parsed.data.category);
+      const topic = await client.query(
+        `INSERT INTO custom_topics (user_id, category_id, category, title)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (category_id, lower(btrim(title))) DO NOTHING
+         RETURNING id, category, title`,
+        [user.id, category.id, category.name, parsed.data.title],
+      );
+      return { category, topic: topic.rows[0] };
+    });
+    if (!result) return NextResponse.json({ error: 'Learning area not found.' }, { status: 404 });
+    if (!result.topic) {
       return NextResponse.json({ error: 'You already added this topic to that category.' }, { status: 409 });
     }
-    return NextResponse.json({ topic: result.rows[0] }, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
     Sentry.captureException(error);
     return NextResponse.json({ error: 'Could not add the topic. Please try again.' }, { status: 503 });

@@ -1,6 +1,6 @@
 # LearnAI
 
-LearnAI is a daily learning app for developers who rely on AI tools and want to rebuild their fundamentals through short, evidence-based practice sessions. Learners pick a track, choose a topic or enter their own work problem, and then work with an AI tutor at the right level before finishing with a structured interview-style quiz. The goal is to keep progress tied to measured learning outcomes instead of generic confidence claims.
+LearnAI helps people explore a subject or industry with an AI tutor. On first sign-in, learners describe their goal and receive three personal categories, each with starter topics. They can add their own topics and categories, or delete a category and its topics after confirmation.
 
 ## Progress log
 
@@ -16,9 +16,11 @@ LearnAI is a daily learning app for developers who rely on AI tools and want to 
 3. Run lint and tests with `npm run lint` and `npm run test -- --run`.
 
 Apply the SQL migrations in `db/migrations` in order to the Supabase database.
-Migration 003 is required for custom topics and references Supabase's `auth.users`.
+Migrations 003 through 005 are required for personal topics, onboarding, and multiple explorations and reference Supabase's `auth.users`. Migration 004 preserves existing custom topics and creates their categories; migration 005 moves an existing plan into its first exploration. Existing users who have not yet onboarded will be asked to set up a learning plan, and their existing topics will be included.
 Signed-in users can add private topics under an existing category or create a new
-category; these topics follow their account across devices.
+category; these topics follow their account across devices. The app requires `GEMINI_API_KEY` for plan generation and tutoring. Generation is limited to five attempts per user and 100 total per day per server process; these limits reset on process restart.
+
+Use the **Currently exploring** dropdown to switch between private learning areas or add another. Each area has its own generated categories and topics; switching is saved to the account.
 
 ## Roadmap
 

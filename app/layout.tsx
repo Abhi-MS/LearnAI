@@ -9,7 +9,7 @@ export function generateMetadata(): Metadata {
   return {
     title: "LearnAI",
     description:
-      "Daily learning app for developers using AI to rebuild fundamentals.",
+      "Explore your interests with a personalized AI tutor.",
     other: { ...Sentry.getTraceData() },
   };
 }

@@ -21,11 +21,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   if (!signedIn) {
     return (
       <main className="signin-page">
-        <span className="badge">Daily learning for developers</span>
+        <span className="badge">Learning tailored to you</span>
         <h1>LearnAI</h1>
         <p className="lead">
-          Rebuild the fundamentals that matter on the job, with an AI tutor that
-          adapts to your level.
+          Explore what matters to you with an AI tutor that adapts to your level.
         </p>
         <button
           type="button"
