@@ -214,6 +214,28 @@ describe('POST /api/tutor', () => {
     expect(response.status).toBe(503);
   });
 
+  it('resumes with the owned saved note and does not cache personalized lessons', async () => {
+    query.mockResolvedValueOnce({ rows: [{
+      title: 'Database indexing', previous_topics: [], saved_note: 'Previous session A',
+      saved_depth: 'developing', saved_next_step: 'Explore indexes', saved_revision: 1,
+    }] }).mockResolvedValueOnce({ rows: [{
+      title: 'Database indexing', previous_topics: [], saved_note: 'Previous session B',
+      saved_depth: 'introductory', saved_next_step: 'Explore tables', saved_revision: 2,
+    }] });
+    const { POST } = await import('./route');
+    const request = () => new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, mode: 'lesson', history: [] }),
+    });
+    expect((await POST(request())).status).toBe(200);
+    expect((await POST(request())).status).toBe(200);
+    expect(JSON.parse(generateContent.mock.calls[0][0].contents).saved_topic_note).toEqual({
+      note: 'Previous session A', depth: 'developing', nextStep: 'Explore indexes',
+    });
+    expect(JSON.parse(generateContent.mock.calls[0][0].contents).request).toContain('Resume this topic');
+    expect(JSON.parse(generateContent.mock.calls[1][0].contents).saved_topic_note.note).toBe('Previous session B');
+    expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
   it('only adds a recall checkpoint when the latest question is judged related, including later in the session', async () => {
     query.mockImplementation((sql: string, values: unknown[]) => sql.includes('SELECT t.title')
       ? { rows: [{ title: 'Database indexing', previous_topics: values[2] ? ['Concurrency', 'Transactions'] : [] }] }

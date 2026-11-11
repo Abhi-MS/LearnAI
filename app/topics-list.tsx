@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import TutorPanel from "./tutor-panel";
+import React, { useEffect, useRef, useState } from "react";
+import TutorPanel, { type TutorPanelHandle } from "./tutor-panel";
 import AuthButton from "./auth-button";
+import TopicNotesPreview from "./topic-notes-preview";
 import { LEVELS, type Level } from "../lib/levels";
 import { MAX_CATEGORY_LENGTH, MAX_LEARNING_GOAL_LENGTH, MAX_TOPIC_LENGTH } from "../lib/topic-limits";
 
-type Topic = { id: string; title: string };
+type Topic = { id: string; title: string; hasNote: boolean };
 type Category = { id: string; name: string; topics: Topic[] };
 type Area = { id: string; name: string; categories: Category[] };
 type Plan = { activeAreaId: string | null; areas: Area[] };
@@ -30,6 +31,7 @@ export default function TopicsList() {
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [selected, setSelected] = useState<SelectedTopic | null>(null);
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -40,6 +42,48 @@ export default function TopicsList() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [levels, setLevels] = useState<Record<string, Level>>({});
+  const tutorRef = useRef<TutorPanelHandle>(null);
+  const leavingRef = useRef(false);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
+
+  function markTopicHasNote(topicId: string) {
+    setPlan((current) => current && {
+      ...current,
+      areas: current.areas.map((area) => ({
+        ...area,
+        categories: area.categories.map((item) => ({
+          ...item,
+          topics: item.topics.map((topic) => topic.id === topicId ? { ...topic, hasNote: true } : topic),
+        })),
+      })),
+    });
+  }
+
+  async function requestLeave(action: () => void) {
+    if (leavingRef.current) return;
+    if (!selected || !tutorRef.current) {
+      pendingLeaveRef.current = null;
+      action();
+      return;
+    }
+    pendingLeaveRef.current = action;
+    leavingRef.current = true;
+    try {
+      if (await tutorRef.current.prepareToLeave()) {
+        pendingLeaveRef.current = null;
+        action();
+      }
+    } finally {
+      leavingRef.current = false;
+    }
+  }
+
+  function discardAndLeave() {
+    if (leavingRef.current) return;
+    const action = pendingLeaveRef.current;
+    pendingLeaveRef.current = null;
+    action?.();
+  }
 
   async function loadPlan() {
     try {
@@ -74,6 +118,7 @@ export default function TopicsList() {
       await readResponse(response);
       await loadPlan();
       setAddingArea(false);
+      setOpenNoteId(null);
       setGoal("");
       setSelected(null);
       setCategory("");
@@ -109,9 +154,9 @@ export default function TopicsList() {
         const found = area.categories.some((item) => item.id === data.category.id);
         const categories = found
           ? area.categories.map((item) => item.id === data.category.id
-            ? { ...item, topics: [...item.topics, { id: data.topic.id, title: data.topic.title }] }
+            ? { ...item, topics: [...item.topics, { id: data.topic.id, title: data.topic.title, hasNote: false }] }
             : item)
-          : [...area.categories, { ...data.category, topics: [{ id: data.topic.id, title: data.topic.title }] }];
+          : [...area.categories, { ...data.category, topics: [{ id: data.topic.id, title: data.topic.title, hasNote: false }] }];
         return { ...current, areas: current.areas.map((item) => item.id === area.id ? { ...item, categories } : item) };
       });
       setTitle("");
@@ -159,6 +204,7 @@ export default function TopicsList() {
         body: JSON.stringify({ areaId }),
       }));
       setPlan((current) => current && { ...current, activeAreaId: areaId });
+      setOpenNoteId(null);
       setSelected(null);
       setConfirmDelete(null);
       setCategory("");
@@ -187,12 +233,19 @@ export default function TopicsList() {
             disabled={switching || saving || deleting || generating}
             onChange={(event) => {
               if (event.target.value === "add") {
-                setAddingArea(true);
-                setOnboardingError("");
-                setSwitchError("");
+                void requestLeave(() => {
+                  setSelected(null);
+                  setAddingArea(true);
+                  setOpenNoteId(null);
+                  setOnboardingError("");
+                  setSwitchError("");
+                });
               } else {
                 if (event.target.value === activeArea.id) setAddingArea(false);
-                else switchArea(event.target.value);
+                else {
+                  const areaId = event.target.value;
+                  void requestLeave(() => { void switchArea(areaId); });
+                }
               }
             }}
           >
@@ -202,7 +255,7 @@ export default function TopicsList() {
           {switchError && <p className="status status-error" role="alert">{switchError}</p>}
         </div>
       )}
-      <AuthButton />
+      <AuthButton onSignOutRequest={(signOut) => { void requestLeave(signOut); }} />
     </div>
   );
 
@@ -276,16 +329,26 @@ export default function TopicsList() {
               </div>
               <ul className="topic-list">
                 {item.topics.map((topic) => (
-                  <li key={topic.id}>
-                    <button type="button" className={`topic-button${selected?.id === topic.id ? " active" : ""}`} onClick={() => setSelected({ ...topic, categoryId: item.id })}>
+                  <li key={topic.id} className="topic-row">
+                    <button type="button" className={`topic-button${selected?.id === topic.id ? " active" : ""}`} onClick={() => {
+                      setOpenNoteId(null);
+                      if (selected?.id !== topic.id) void requestLeave(() => setSelected({ ...topic, categoryId: item.id }));
+                    }}>
                       <span>{topic.title}</span><span className="level-chip">{levels[`custom-${topic.id}`] ?? LEVELS[0]}</span>
                     </button>
+                    {topic.hasNote && <TopicNotesPreview
+                      topicId={topic.id}
+                      title={topic.title}
+                      open={openNoteId === topic.id}
+                      onToggle={() => setOpenNoteId((current) => current === topic.id ? null : topic.id)}
+                      onClose={() => setOpenNoteId(null)}
+                    />}
                   </li>
                 ))}
               </ul>
               {confirmDelete?.id === item.id && (
                 <div className="delete-confirmation" role="group" aria-labelledby={`delete-title-${item.id}`}>
-                  <p id={`delete-title-${item.id}`}>Delete {item.name} and all its topics permanently?</p>
+                  <p id={`delete-title-${item.id}`}>Delete {item.name}, all its topics, and their saved notes permanently?</p>
                   {deleteError && <p className="status status-error" role="alert">{deleteError}</p>}
                   <div className="delete-actions">
                     <button type="button" className="chip-button" disabled={deleting} onClick={() => setConfirmDelete(null)}>Cancel</button>
@@ -298,7 +361,17 @@ export default function TopicsList() {
         </div>
         {!selected && <p className="status">Select a topic to start a tutoring session.</p>}
       </section>
-      <TutorPanel key={selected?.id ?? "closed"} topicId={selected?.id ?? null} topic={selected?.title ?? null} level={selected ? levels[`custom-${selected.id}`] ?? LEVELS[0] : LEVELS[0]} onClose={() => setSelected(null)} />
+      <TutorPanel
+        key={selected?.id ?? "closed"}
+        ref={tutorRef}
+        topicId={selected?.id ?? null}
+        topic={selected?.title ?? null}
+        level={selected ? levels[`custom-${selected.id}`] ?? LEVELS[0] : LEVELS[0]}
+        onClose={() => { void requestLeave(() => setSelected(null)); }}
+        onRetryLeave={() => { if (pendingLeaveRef.current) void requestLeave(pendingLeaveRef.current); }}
+        onDiscardLeave={discardAndLeave}
+        onNoteSaved={markTopicHasNote}
+      />
     </>
   );
 }

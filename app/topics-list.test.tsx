@@ -8,7 +8,7 @@ vi.mock("./tutor-panel", () => ({
 }));
 vi.mock("./auth-button", () => ({ default: () => null }));
 
-const category = { id: "1", name: "Photography", topics: [{ id: "topic-1", title: "Lighting" }] };
+const category = { id: "1", name: "Photography", topics: [{ id: "topic-1", title: "Lighting", hasNote: false }] };
 const area = { id: "area-1", name: "Photography", categories: [category] };
 const plan = { activeAreaId: area.id, areas: [area] };
 const ok = (data: unknown) => ({ ok: true, json: async () => data });
@@ -28,7 +28,7 @@ describe("learning plan", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create my learning plan" }));
     expect(await screen.findByRole("heading", { name: "Photography" })).toBeInTheDocument();
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ goal: "Photography" });
-    fireEvent.click(screen.getByRole("button", { name: /Lighting/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Lighting/ }));
     expect(screen.getByText("Tutor: Lighting")).toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe("learning plan", () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(ok(plan)).mockResolvedValueOnce(ok({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
     render(<TopicsList />);
-    fireEvent.click(await screen.findByRole("button", { name: /Lighting/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Lighting/ }));
     fireEvent.click(screen.getByRole("button", { name: "Delete Photography category" }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const confirmation = screen.getByRole("group", { name: /Delete Photography/ });

@@ -27,8 +27,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           Explore what matters to you with an AI tutor that adapts to your level.
         </p>
         <p className="privacy-notice">
-          Learning goals, topics (including recently studied topics), active tutor conversations, and diagram answers are sent to Google Gemini to
-          generate responses or assess answers. Please don&apos;t enter sensitive or confidential information.
+          Learning goals, topics (including recently studied topics), active tutor conversations, saved topic notes, and diagram answers are sent to Google Gemini to
+          generate responses, summaries, or assessments. Topic summaries are saved to your account. Please don&apos;t enter sensitive or confidential information.
         </p>
         <button
           type="button"

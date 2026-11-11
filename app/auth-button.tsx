@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "../lib/supabase-browser";
 
-export default function AuthButton() {
+export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (signOut: () => void) => void }) {
   const [supabase] = useState(() => createSupabaseBrowserClient());
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
@@ -49,7 +49,11 @@ export default function AuthButton() {
         <img className="avatar" src={user.user_metadata.avatar_url} alt="" referrerPolicy="no-referrer" />
       )}
       <span className="auth-name">{name}</span>
-      <button type="button" className="chip-button" onClick={() => supabase.auth.signOut()}>
+      <button type="button" className="chip-button" onClick={() => {
+        const signOut = () => { void supabase.auth.signOut(); };
+        if (onSignOutRequest) onSignOutRequest(signOut);
+        else signOut();
+      }}>
         Sign out
       </button>
     </div>

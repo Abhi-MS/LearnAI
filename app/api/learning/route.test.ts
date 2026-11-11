@@ -39,6 +39,9 @@ describe('/api/learning', () => {
     const response = await GET();
     expect(await response.json()).toEqual({ activeAreaId: 'area', areas: [] });
     expect(query).toHaveBeenCalledWith(expect.stringContaining('a.user_id = $1'), ['user-1']);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining(
+      "'hasNote', EXISTS (SELECT 1 FROM topic_notes n WHERE n.user_id = t.user_id AND n.topic_id = t.id)",
+    ), ['user-1']);
   });
 
   it.each(['', ' '.repeat(2), 'a'.repeat(201), 123])('rejects invalid goals', async (goal) => {

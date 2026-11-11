@@ -5,6 +5,12 @@ import TutorPanel from "./tutor-panel";
 
 afterEach(() => vi.unstubAllGlobals());
 
+function stubTutorFetch(fetchMock: (url: string, init?: RequestInit) => unknown) {
+  vi.stubGlobal("fetch", (url: string, init?: RequestInit) => url.startsWith("/api/tutor/summary?")
+    ? Promise.resolve({ ok: true, json: async () => ({ note: null }) })
+    : fetchMock(url, init));
+}
+
 const payload = {
   narrative: "Lesson",
   analogies: ["A useful analogy"],
@@ -17,7 +23,7 @@ const payload = {
 };
 
 it("keeps the disclaimer accessible without occupying chat space", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+  stubTutorFetch(vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({ payload }),
   }));
@@ -40,7 +46,7 @@ it("keeps the disclaimer accessible without occupying chat space", async () => {
 
 it("sends the active conversation when the learner asks a follow-up", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ payload }) });
-  vi.stubGlobal("fetch", fetchMock);
+  stubTutorFetch(fetchMock);
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
   await screen.findByText("Lesson");
   fireEvent.change(screen.getByPlaceholderText("Ask about Concurrency…"), { target: { value: "How does that work?" } });
@@ -65,7 +71,7 @@ it("sends the active conversation when the learner asks a follow-up", async () =
 it("renders a reply without a diagram or analogy and keeps it in conversation context", async () => {
   const plainPayload = { ...payload, analogies: [], visualization_nodes: [], visualization_edges: [] };
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ payload: plainPayload }) });
-  vi.stubGlobal("fetch", fetchMock);
+  stubTutorFetch(fetchMock);
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
   await screen.findByText("Lesson");
   expect(screen.queryByText(/Concept diagram/)).not.toBeInTheDocument();
@@ -86,7 +92,7 @@ it("keeps chat usable while a diagram answer is being assessed", async () => {
   const fetchMock = vi.fn((url: string) => url === "/api/tutor/assess"
     ? pendingAssessment
     : Promise.resolve({ ok: true, json: async () => ({ payload }) }));
-  vi.stubGlobal("fetch", fetchMock);
+  stubTutorFetch(fetchMock);
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
   await screen.findByText("Lesson");
   fireEvent.change(screen.getByLabelText(/Fill in the missing/), { target: { value: "A possible answer" } });
@@ -104,7 +110,7 @@ it("keeps a failed question in context when the learner asks to retry", async ()
     .mockResolvedValueOnce({ ok: true, json: async () => ({ payload }) })
     .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "Tutor unavailable" }) })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ payload }) });
-  vi.stubGlobal("fetch", fetchMock);
+  stubTutorFetch(fetchMock);
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
   await screen.findByText("Lesson");
   fireEvent.change(screen.getByPlaceholderText("Ask about Concurrency…"), { target: { value: "How do threads share memory?" } });

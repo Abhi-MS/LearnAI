@@ -27,7 +27,10 @@ export async function GET() {
             SELECT json_agg(json_build_object(
               'id', c.id, 'name', c.name,
               'topics', COALESCE((
-                SELECT json_agg(json_build_object('id', t.id, 'title', t.title) ORDER BY t.created_at, t.id)
+                SELECT json_agg(json_build_object(
+                  'id', t.id, 'title', t.title,
+                  'hasNote', EXISTS (SELECT 1 FROM topic_notes n WHERE n.user_id = t.user_id AND n.topic_id = t.id)
+                ) ORDER BY t.created_at, t.id)
                 FROM custom_topics t WHERE t.user_id = c.user_id AND t.category_id = c.id
               ), '[]'::json)
             ) ORDER BY c.created_at, c.id)

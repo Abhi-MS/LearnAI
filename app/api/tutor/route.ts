@@ -12,6 +12,7 @@ import {
   type TutorLevel,
 } from '../../../lib/tutor';
 import { tutorHistorySchema } from '../../../lib/types/socratic';
+import { savedTopicNoteSchema } from '../../../lib/types/topic-note';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,8 +51,12 @@ export async function POST(request: Request) {
   );
 
   try {
-    const topicResult = await getPool().query<{ title: string; previous_topics: string[] }>(
-      `SELECT t.title, CASE WHEN $3::boolean THEN ARRAY(
+    const topicResult = await getPool().query<{
+      title: string; previous_topics: string[]; saved_note: string | null;
+      saved_depth: string | null; saved_next_step: string | null; saved_revision: number | null;
+    }>(
+      `SELECT t.title, n.note AS saved_note, n.depth AS saved_depth,
+       n.next_step AS saved_next_step, n.revision AS saved_revision, CASE WHEN $3::boolean THEN ARRAY(
         SELECT previous.title
         FROM topic_study_history h
         JOIN custom_topics previous ON previous.id = h.topic_id AND previous.user_id = h.user_id
@@ -60,7 +65,9 @@ export async function POST(request: Request) {
         ORDER BY MAX(h.last_studied_at) DESC, previous.title
         LIMIT $4
       ) ELSE ARRAY[]::text[] END AS previous_topics
-      FROM custom_topics t WHERE t.user_id = $1 AND t.id = $2`,
+      FROM custom_topics t
+      LEFT JOIN topic_notes n ON n.user_id = t.user_id AND n.topic_id = t.id
+      WHERE t.user_id = $1 AND t.id = $2`,
       [auth.user.id, topicId.data, mode === 'chat' && !alreadyRecalled, MAX_RECALL_TOPICS],
     );
     const topic = topicResult.rows[0];
@@ -68,9 +75,13 @@ export async function POST(request: Request) {
     if ([topic.title, ...topic.previous_topics].some((title) => title.length > MAX_TOPIC_LENGTH)) {
       throw new Error('Stored topic exceeds the supported length.');
     }
+    const savedNote = topic.saved_note == null ? null : savedTopicNoteSchema.parse({
+      note: topic.saved_note, depth: topic.saved_depth, nextStep: topic.saved_next_step, revision: topic.saved_revision,
+    });
+    const resumeNote = savedNote && { note: savedNote.note, depth: savedNote.depth, nextStep: savedNote.nextStep };
     const { payload, recallTopic } = await askTutor({
       userId: auth.user.id, topic: topic.title, level, question, mode, history: history.data,
-      previousTopics: topic.previous_topics,
+      previousTopics: topic.previous_topics, resumeNote,
     });
     if (mode === 'chat') {
       const saved = await getPool().query(

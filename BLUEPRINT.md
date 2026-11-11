@@ -32,13 +32,13 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 
 ### Milestone 5: Stateless Session Termination & Summary Sync
 
-- [ ] **Memory Optimization Directive:** Do not store long, verbose multi-turn chat streams in Postgres/Supabase; persist only the minimal session state and summary needed to resume learning.
-- [ ] **Session Teardown Hook:** On explicit chat closure or topic exit, call a cleanup API that asks Gemini to summarize the conversation stream into a small structured payload containing:
+- [x] **Memory Optimization Directive:** Do not store long, verbose multi-turn chat streams in Postgres/Supabase; persist only the minimal session state and summary needed to resume learning.
+- [x] **Session Teardown Hook:** On explicit chat closure or topic exit, call a cleanup API that asks Gemini to summarize the conversation stream into a small structured payload containing:
   1. A short Markdown note describing the main breakthroughs.
   2. Enum or numerical evaluation markers for conceptual depth. These markers are descriptive and must not independently gate progress.
   3. A structural pointer/next-step string specifying where the dialogue should resume when the learner returns to the topic.
-- [ ] **Database Sync:** Add or adapt the `topic_sessions` schema and persist the lightweight summary payload there. Treat cleanup on window unmount as best-effort; do not rely on it as the only persistence trigger.
-- [ ] **Topic Notes and Resume:** Let learners view the saved summary for a topic. Discard the full conversation context after the chat is disposed, and provide the saved summary and resume pointer as context when the learner returns.
+- [x] **Database Sync:** Persist one rolling summary per topic in `topic_notes`. Browser page-exit saves are best-effort; explicit exits wait for the result and offer retry or leaving without saving.
+- [x] **Topic Notes and Resume:** Let learners view the saved summary for a topic. Discard the full conversation context after the chat is disposed, and provide the saved summary and resume pointer as context when the learner returns.
 
 ### Milestone 6: Assessment & Evidence-Based Progress
 
@@ -64,4 +64,4 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 - Keep the first delivery focused on the loop: track selection, topic, a single tutor, structured quiz generation, validation, and evidence-based progress.
 - Add the background assessor only after the Socratic tutoring loop is working; it validates retrieval challenges and can suggest quizzes, while validated quiz outcomes determine level progression.
 - Use explicit tool calls for learner-state access so the tutor remains auditable and the app remains truthful about what is actually measured.
-- The baseline migrations define `sessions` and `concept_gaps`, but not `concepts` or `topic_sessions`; Milestone 4 adds `topic_study_history`, and Milestone 5 must add or adapt a session-summary schema.
+- The baseline migrations define `sessions` and `concept_gaps`, but not `concepts` or `topic_sessions`; Milestones 4 and 5 add `topic_study_history` and `topic_notes` instead.
