@@ -36,6 +36,11 @@ export const socraticPayloadSchema = z.object({
 
 export type SocraticPayload = z.infer<typeof socraticPayloadSchema>;
 
+export const diagramAssessmentSchema = z.object({
+  correct: z.boolean(),
+  feedback: z.string().trim().min(1).max(400),
+}).strict();
+
 export const tutorHistorySchema = z.array(z.discriminatedUnion('role', [
   z.object({ role: z.literal('user'), text: z.string().trim().min(1).max(500) }).strict(),
   z.object({ role: z.literal('tutor'), payload: socraticPayloadSchema }).strict(),

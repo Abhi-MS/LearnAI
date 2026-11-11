@@ -17,6 +17,7 @@ LearnAI helps people explore a subject or industry with an AI tutor. On first si
 
 Apply the SQL migrations in `db/migrations` in order to the Supabase database.
 Migrations 003 through 005 are required for personal topics, onboarding, and multiple explorations and reference Supabase's `auth.users`. Migration 004 preserves existing custom topics and creates their categories; migration 005 moves an existing plan into its first exploration. Existing users who have not yet onboarded will be asked to set up a learning plan, and their existing topics will be included.
+Migration 007 is required for tutoring: it stores each user's last successful follow-up time per topic, across their explorations. A topic becomes eligible for recall after the tutor successfully answers a follow-up; opening a lesson alone does not count. Removing a topic also removes its study-history entry.
 Signed-in users can add private topics under an existing category or create a new
 category; these topics follow their account across devices. The app requires `GEMINI_API_KEY` for plan generation and tutoring. Generation is limited to five attempts per user and 100 total per day per server process; these limits reset on process restart.
 
@@ -24,9 +25,11 @@ Use the **Currently exploring** dropdown to switch between private learning area
 
 The tutor introduces a topic with an explanation and question, using examples, analogies, and interactive diagrams when helpful. Select diagram nodes to explore them. Follow-up questions include the active conversation as context; it is discarded when the topic closes and is not saved as chat history. Conversations exceeding 60,000 characters of structured history must be restarted.
 
+When a diagram appears, a node or connection is hidden for an optional retrieval exercise. Check an answer or reveal it; chat remains available. Each check sends an additional request to Gemini and shares the tutor's daily request limits (by default, 30 per user and 100 total per server process, resetting at UTC midnight or process restart). Gemini's own usage limits are separate. For a follow-up question, Gemini checks up to 50 of the most recently studied different topic names for a direct, meaningful relationship to that question. A related topic may prompt one recall checkpoint per session; unrelated or ambiguous questions should not. This relevance judgment uses the existing tutor request and can be imperfect. These exercises do not change topic levels.
+
 ## Privacy and database security
 
-Learning goals, topic names, and active tutor conversations are sent to Google Gemini. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
+Learning goals, topic names, active tutor conversations, diagram details, and submitted diagram answers are sent to Google Gemini. For recall relevance, up to 50 recently studied topic names are sent with follow-up requests until a checkpoint is shown. Study history stores topic IDs and last-studied times, not conversations or assessment results. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
 
 AI tutor responses can be inaccurate or outdated, especially for new technologies. Verify important details against reliable, current sources.
 

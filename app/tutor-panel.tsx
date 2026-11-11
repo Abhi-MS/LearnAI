@@ -13,7 +13,9 @@ type Message =
   | { role: "tutor"; payload: SocraticPayload }
   | { role: "user" | "error"; text: string };
 
-async function callTutor(body: { topic: string; level: Level; mode: "lesson" | "chat"; question?: string; history: TutorHistory }) {
+type TutorRequest = { topicId: string; level: Level; mode: "lesson" | "chat"; question?: string; history: TutorHistory };
+
+async function callTutor(body: TutorRequest) {
   const res = await fetch("/api/tutor", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -33,10 +35,12 @@ async function callTutor(body: { topic: string; level: Level; mode: "lesson" | "
 }
 
 export default function TutorPanel({
+  topicId,
   topic,
   level,
   onClose,
 }: {
+  topicId: string | null;
   topic: string | null;
   level: Level;
   onClose: () => void;
@@ -49,7 +53,7 @@ export default function TutorPanel({
   const noticeRef = useRef<HTMLDetailsElement>(null);
   const open = topic !== null;
 
-  async function load(request: { topic: string; level: Level; mode: "lesson" | "chat"; question?: string; history: TutorHistory }, userText?: string) {
+  async function load(request: TutorRequest, userText?: string) {
     setLoading(true);
     if (userText) {
       setMessages((m) => [...m, { role: "user", text: userText }]);
@@ -76,7 +80,7 @@ export default function TutorPanel({
     // Strict Mode runs effects twice in dev; the ref keeps it to one request
     if (startedRef.current) return;
     startedRef.current = true;
-    if (topic) load({ topic, level, mode: "lesson", history: [] });
+    if (topic && topicId) load({ topicId, level, mode: "lesson", history: [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,9 +106,9 @@ export default function TutorPanel({
   function ask(event: React.FormEvent) {
     event.preventDefault();
     const text = question.trim();
-    if (!text || loading || !topic) return;
+    if (!text || loading || !topic || !topicId) return;
     setQuestion("");
-    load({ topic, level, mode: "chat", question: text, history }, text);
+    load({ topicId, level, mode: "chat", question: text, history }, text);
   }
 
   return (
@@ -125,7 +129,7 @@ export default function TutorPanel({
             <div className="drawer-actions">
               <details className="tutor-notice" ref={noticeRef}>
                 <summary>AI &amp; privacy</summary>
-                <p className="privacy-notice tutor-notice-content">Your topic and active conversation are sent to Google Gemini. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
+                <p className="privacy-notice tutor-notice-content">Your topic and active conversation are sent to Google Gemini. Names of recently studied topics may also be sent to check their relevance; diagram answers and diagram details are sent for assessment. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
               </details>
               <button type="button" className="link-button" onClick={onClose} aria-label="Close tutor">
                 ✕
@@ -143,7 +147,7 @@ export default function TutorPanel({
                       {m.payload.analogies.map((analogy, index) => <p key={index}><strong>Analogy:</strong> {analogy}</p>)}
                     </div>
                     {m.payload.visualization_nodes.length > 0 && (
-                      <SocraticGraph nodes={m.payload.visualization_nodes} edges={m.payload.visualization_edges} />
+                      <SocraticGraph topic={topic} payload={m.payload} />
                     )}
                     <div className="markdown">
                       {m.payload.socratic_questions.map((item, index) => <p key={index}><strong>Let&apos;s explore:</strong> {item}</p>)}

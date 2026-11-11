@@ -27,8 +27,8 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 
 ### Milestone 4: Cognitive Science Integration & Assessment Workers
 
-- [ ] **The Broken Diagram Test (Active Retrieval):** Randomly remove a crucial node or edge label from a validated visual graph. Ask the learner to fill in the blank or complete a micro-challenge, then validate the response with the background assessor.
-- [ ] **Contextual Interleaving Hooks:** Query past topics from the `concepts` data tables and inject historical-recall checkpoints into current chat loops. Add or adapt the topic-history schema if it is not available in the baseline database.
+- [x] **The Broken Diagram Test (Active Retrieval):** Randomly hide a central node or bridge-edge label from a validated visual graph. Let the learner answer or reveal it without blocking chat; an asynchronous Gemini request assesses submitted answers without changing levels.
+- [x] **Contextual Interleaving Hooks:** Record successfully studied topics and, when a learner's question is directly related, offer a recall checkpoint for a recently studied different topic, including across explorations.
 
 ### Milestone 5: Stateless Session Termination & Summary Sync
 
@@ -64,4 +64,4 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 - Keep the first delivery focused on the loop: track selection, topic, a single tutor, structured quiz generation, validation, and evidence-based progress.
 - Add the background assessor only after the Socratic tutoring loop is working; it validates retrieval challenges and can suggest quizzes, while validated quiz outcomes determine level progression.
 - Use explicit tool calls for learner-state access so the tutor remains auditable and the app remains truthful about what is actually measured.
-- The baseline migrations define `sessions` and `concept_gaps`, but not `concepts` or `topic_sessions`; add or adapt those tables as part of Milestones 4 and 5 rather than assuming they already exist.
+- The baseline migrations define `sessions` and `concept_gaps`, but not `concepts` or `topic_sessions`; Milestone 4 adds `topic_study_history`, and Milestone 5 must add or adapt a session-summary schema.

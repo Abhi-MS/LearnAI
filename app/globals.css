@@ -643,6 +643,28 @@ body {
   padding-left: 1.2rem;
 }
 
+.diagram-challenge {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.diagram-challenge input {
+  min-width: 0;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.diagram-challenge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .markdown > :first-child {
   margin-top: 0;
 }

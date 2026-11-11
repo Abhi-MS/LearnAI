@@ -298,7 +298,7 @@ export default function TopicsList() {
         </div>
         {!selected && <p className="status">Select a topic to start a tutoring session.</p>}
       </section>
-      <TutorPanel key={selected?.id ?? "closed"} topic={selected?.title ?? null} level={selected ? levels[`custom-${selected.id}`] ?? LEVELS[0] : LEVELS[0]} onClose={() => setSelected(null)} />
+      <TutorPanel key={selected?.id ?? "closed"} topicId={selected?.id ?? null} topic={selected?.title ?? null} level={selected ? levels[`custom-${selected.id}`] ?? LEVELS[0] : LEVELS[0]} onClose={() => setSelected(null)} />
     </>
   );
 }
