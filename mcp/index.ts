@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import * as Sentry from '@sentry/node';
+import { sanitizeSentryError } from '../lib/sentry-privacy';
 
 // Load .env.local without extra dependencies (stdout is reserved for the MCP protocol)
 try {
@@ -17,7 +18,9 @@ try {
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   enabled: Boolean(process.env.SENTRY_DSN),
-  tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 1.0),
+  tracesSampleRate: 0,
+  beforeSend: sanitizeSentryError,
+  beforeSendTransaction: () => null,
 });
 
 async function main() {

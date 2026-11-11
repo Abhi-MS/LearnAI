@@ -123,6 +123,7 @@ export default function TutorPanel({
             <div ref={endRef} />
           </div>
 
+          <p className="privacy-notice tutor-privacy">Topics and questions are sent to Google Gemini. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
           <form onSubmit={ask} className="composer">
             <textarea
               value={question}

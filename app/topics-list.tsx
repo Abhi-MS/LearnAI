@@ -220,6 +220,7 @@ export default function TopicsList() {
         <span className="badge">Learning tailored to you</span>
         <h1>What would you like to learn?</h1>
         <p className="lead">Tell us your industry or a subject you are curious about. We&apos;ll create three categories with starter topics for you.</p>
+        <p className="privacy-notice">Your learning goal is sent to Google Gemini. Don&apos;t include sensitive or confidential information.</p>
         <form className="custom-topic-form onboarding-form" onSubmit={generatePlan}>
           <label htmlFor="learning-goal">Your industry or learning goal</label>
           <input id="learning-goal" placeholder="e.g. photography, healthcare, or personal finance" value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={MAX_LEARNING_GOAL_LENGTH} disabled={generating} required />

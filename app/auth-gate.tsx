@@ -26,6 +26,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         <p className="lead">
           Explore what matters to you with an AI tutor that adapts to your level.
         </p>
+        <p className="privacy-notice">
+          Learning goals, topics and tutor questions are sent to Google Gemini to
+          generate responses. Please don&apos;t enter sensitive or confidential information.
+        </p>
         <button
           type="button"
           className="primary"

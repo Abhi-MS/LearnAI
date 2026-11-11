@@ -22,6 +22,16 @@ category; these topics follow their account across devices. The app requires `GE
 
 Use the **Currently exploring** dropdown to switch between private learning areas or add another. Each area has its own generated categories and topics; switching is saved to the account.
 
+## Privacy and database security
+
+Learning goals, topic names, and tutor questions are sent to Google Gemini. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
+
+AI tutor responses can be inaccurate or outdated, especially for new technologies. Verify important details against reliable, current sources.
+
+Supabase database connections require certificate and hostname verification. Node's trusted certificate authorities are used by default. If your Supabase connection requires a separate CA, download it from Supabase Dashboard > Database Settings > SSL Configuration, and set `SUPABASE_DB_CA_CERT` to its PEM contents (newlines or `\n`) in each deployment environment. Do not disable certificate verification. Check `/api/health/db` after deployment.
+
+Sentry error events are reduced to a generic error without the original message, request, user, breadcrumbs, or stack trace. Performance tracing is disabled. This limits diagnostics and does not change Sentry or Google account settings or remove historical data already sent to them.
+
 ## Roadmap
 
 See [BLUEPRINT.md](BLUEPRINT.md) for the full milestone plan and design rules.
