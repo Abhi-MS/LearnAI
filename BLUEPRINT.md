@@ -2,7 +2,7 @@
 
 ## Concept
 
-LearnAI is an on-demand learning companion for developers who use AI tools and want to understand the foundations behind their work. A learner can explore a topic just in time for a real project or learn at their own pace in spare moments. The tutor combines explanations, diagrams, Socratic questions, and examples relevant to the learner's situation. Assessments check understanding using evidence rather than impressions of conversational quality.
+LearnAI is an on-demand learning companion for people exploring any field, whether they need to understand something for a real project or want to learn at their own pace in spare moments. The tutor combines explanations, diagrams, Socratic questions, and examples relevant to the learner's situation. Assessments check understanding using evidence rather than impressions of conversational quality.
 
 ## Design rules
 
@@ -20,10 +20,10 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 
 ### Milestone 3: Socratic Core & Structured AI Orchestration Engine
 
-- [ ] **Gemini JSON Schema Enforcement:** Use the Gemini SDK's `responseSchema` configuration for structured responses. Add `lib/types/socratic.ts` with strong interfaces for `SocraticPayload`, including analogies, narrative text, Socratic questions, and graph arrays named `visualization_nodes` and `visualization_edges`.
-- [ ] **UI Graphic Mapping Component:** Build an `app/` view that accepts the graph arrays and renders them as an interactive node graph using SVG coordinates or HTML/CSS blocks, rather than text blocks.
-- [ ] **Socratic Conversation:** Start a topic with an explanation, visual diagram, and thought-provoking question. Preserve conversation context during the active chat so follow-up answers can use earlier messages and the learner's real-world examples.
-- [ ] **Current Sources:** Plan a way to reference reliable, current sources for fast-changing technologies, and communicate uncertainty rather than implying AI answers are guaranteed accurate.
+- [x] **Gemini JSON Schema Enforcement:** Use the Gemini SDK's `responseSchema` configuration for structured responses. Add `lib/types/socratic.ts` with strong types for `SocraticPayload`, including analogies, narrative text, Socratic questions, and graph arrays named `visualization_nodes` and `visualization_edges`.
+- [x] **UI Graphic Mapping Component:** Build an `app/` view that accepts the graph arrays and renders them as an interactive node graph using SVG coordinates or HTML/CSS blocks, rather than text blocks.
+- [x] **Socratic Conversation:** Start a topic with an explanation and thought-provoking question. Preserve conversation context during the active chat; adapt to the learner's demonstrated technical depth and use examples, analogies, and diagrams only when helpful.
+- [x] **Current Sources Plan:** For fast-changing subjects, later integrate a vetted grounding or retrieval provider that returns attributable source links and retrieval dates, prioritizes authoritative sources, and discloses any external data transfer. Verify citations before displaying them; when sources are unavailable, clearly communicate uncertainty instead of inventing citations. The current tutor does not search for or verify sources.
 
 ### Milestone 4: Cognitive Science Integration & Assessment Workers
 

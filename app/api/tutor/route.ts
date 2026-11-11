@@ -3,11 +3,13 @@ import * as Sentry from '@sentry/nextjs';
 import { createSupabaseServerClient } from '../../../lib/supabase-server';
 import {
   askTutor,
+  MAX_HISTORY_LENGTH,
   MAX_QUESTION_LENGTH,
   MAX_TOPIC_LENGTH,
   TutorLimitError,
   type TutorLevel,
 } from '../../../lib/tutor';
+import { tutorHistorySchema } from '../../../lib/types/socratic';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +35,17 @@ export async function POST(request: Request) {
   if (topic.length > MAX_TOPIC_LENGTH || question.length > MAX_QUESTION_LENGTH) {
     return NextResponse.json({ error: 'Input too long' }, { status: 400 });
   }
+  const history = tutorHistorySchema.safeParse(body?.history ?? []);
+  if (!history.success || (mode === 'lesson' && history.data.length > 0)) {
+    return NextResponse.json({ error: 'Invalid conversation history.' }, { status: 400 });
+  }
+  if (JSON.stringify(history.data).length > MAX_HISTORY_LENGTH) {
+    return NextResponse.json({ error: 'This conversation is too long. Please start a new topic session.' }, { status: 400 });
+  }
 
   try {
-    const { answer } = await askTutor({ userId: auth.user.id, topic, level, question, mode });
-    return NextResponse.json({ answer });
+    const { payload } = await askTutor({ userId: auth.user.id, topic, level, question, mode, history: history.data });
+    return NextResponse.json({ payload });
   } catch (error) {
     if (error instanceof TutorLimitError) {
       return NextResponse.json({ error: error.message }, { status: 429 });

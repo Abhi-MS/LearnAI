@@ -22,9 +22,11 @@ category; these topics follow their account across devices. The app requires `GE
 
 Use the **Currently exploring** dropdown to switch between private learning areas or add another. Each area has its own generated categories and topics; switching is saved to the account.
 
+The tutor introduces a topic with an explanation and question, using examples, analogies, and interactive diagrams when helpful. Select diagram nodes to explore them. Follow-up questions include the active conversation as context; it is discarded when the topic closes and is not saved as chat history. Conversations exceeding 60,000 characters of structured history must be restarted.
+
 ## Privacy and database security
 
-Learning goals, topic names, and tutor questions are sent to Google Gemini. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
+Learning goals, topic names, and active tutor conversations are sent to Google Gemini. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
 
 AI tutor responses can be inaccurate or outdated, especially for new technologies. Verify important details against reliable, current sources.
 
