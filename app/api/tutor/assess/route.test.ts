@@ -66,7 +66,7 @@ describe('POST /api/tutor/assess', () => {
     vi.resetModules();
     try {
       const { askTutor, assessDiagram, TutorLimitError } = await import('../../../../lib/tutor');
-      generateContent.mockResolvedValueOnce({ text: JSON.stringify(payload) });
+      generateContent.mockResolvedValueOnce({ text: JSON.stringify({ ...payload, conversation_question: 'What next?' }) });
       await askTutor({ userId: 'limit-test', topic: 'Example', level: 'Beginner', mode: 'chat', question: 'Why?' });
       await expect(assessDiagram({
         userId: 'limit-test', topic: 'Example', answer: 'links', expected: 'connects', payload,

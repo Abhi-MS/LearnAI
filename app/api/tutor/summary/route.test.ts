@@ -115,7 +115,7 @@ describe('/api/tutor/summary', () => {
     vi.resetModules();
     try {
       const { askTutor, summarizeTopic, TutorLimitError } = await import('../../../../lib/tutor');
-      generateContent.mockResolvedValueOnce({ text: JSON.stringify(tutor) });
+      generateContent.mockResolvedValueOnce({ text: JSON.stringify({ ...tutor, conversation_question: 'What next?' }) });
       await askTutor({ userId: 'limit-test', topic: 'Concurrency', level: 'Beginner', mode: 'chat', question: 'Why?' });
       await expect(summarizeTopic({ userId: 'limit-test', topic: 'Concurrency', history, previousNote: null }))
         .rejects.toBeInstanceOf(TutorLimitError);

@@ -5,6 +5,7 @@ import { getPool } from '../../../lib/db';
 import { createSupabaseServerClient } from '../../../lib/supabase-server';
 import {
   askTutor,
+  canAskCheckpoint,
   MAX_HISTORY_LENGTH,
   MAX_QUESTION_LENGTH,
   MAX_TOPIC_LENGTH,
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
   const alreadyRecalled = history.data.some((item) =>
     item.role === 'tutor' && item.payload.socratic_questions.some((question) => question.startsWith('Recall checkpoint: ')),
   );
+  const canRecall = mode === 'chat' && !alreadyRecalled && canAskCheckpoint(history.data);
 
   try {
     const topicResult = await getPool().query<{
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
       FROM custom_topics t
       LEFT JOIN topic_notes n ON n.user_id = t.user_id AND n.topic_id = t.id
       WHERE t.user_id = $1 AND t.id = $2`,
-      [auth.user.id, topicId.data, mode === 'chat' && !alreadyRecalled, MAX_RECALL_TOPICS],
+      [auth.user.id, topicId.data, canRecall, MAX_RECALL_TOPICS],
     );
     const topic = topicResult.rows[0];
     if (!topic) return NextResponse.json({ error: 'Topic not found.' }, { status: 404 });
@@ -92,9 +94,8 @@ export async function POST(request: Request) {
       );
       if (!saved.rowCount) return NextResponse.json({ error: 'Topic not found.' }, { status: 404 });
 
-      if (recallTopic) {
+      if (recallTopic && canRecall && payload.socratic_questions.length === 0) {
         payload.socratic_questions = [
-          payload.socratic_questions[0],
           `Recall checkpoint: What do you remember about ${recallTopic}, and how does it relate to your question?`,
         ];
       }

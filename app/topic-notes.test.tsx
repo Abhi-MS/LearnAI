@@ -14,7 +14,7 @@ const plan = {
   }] }],
 };
 const payload = {
-  narrative: "An explanation.", analogies: [], socratic_questions: ["What next?"],
+  narrative: "An explanation.", analogies: [], conversation_question: "Where could this lead?", socratic_questions: ["What next?"],
   visualization_nodes: [], visualization_edges: [],
 };
 const note = { note: "Evaporation changes water into vapor.", depth: "developing", nextStep: "Explore clouds.", revision: 1 };

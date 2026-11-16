@@ -4,7 +4,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Level } from "../lib/levels";
-import { socraticPayloadSchema, type SocraticPayload, type TutorHistory } from "../lib/types/socratic";
+import { tutorResponseSchema, type SocraticPayload, type TutorHistory } from "../lib/types/socratic";
 import { savedTopicNoteSchema, type SavedTopicNote } from "../lib/types/topic-note";
 import { fetchTopicNote } from "../lib/topic-note-client";
 import SocraticGraph from "./socratic-graph";
@@ -36,7 +36,7 @@ async function callTutor(body: TutorRequest) {
         : data.error ?? "Tutor unavailable right now.",
     );
   }
-  const parsed = socraticPayloadSchema.safeParse(data.payload);
+  const parsed = tutorResponseSchema.safeParse(data.payload);
   if (!parsed.success) throw new Error("The tutor response could not be displayed. Please try again.");
   return parsed.data;
 }
@@ -216,7 +216,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
             <div className="drawer-actions">
               <details className="tutor-notice" ref={noticeRef}>
                 <summary>AI &amp; privacy</summary>
-                <p className="privacy-notice tutor-notice-content">Your topic and active conversation are sent to Google Gemini. A generated topic note is saved and sent back to Gemini when you return. Names of recently studied topics may also be sent to check their relevance; diagram answers and diagram details are sent for assessment. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
+                <p className="privacy-notice tutor-notice-content">Your topic and active conversation are sent to Google Gemini. A generated topic note is saved and sent back to Gemini when you return. Names of recently studied topics may also be sent to check their relevance. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
               </details>
               <button type="button" className="link-button" onClick={onClose} aria-label="Close tutor">
                 ✕
@@ -251,10 +251,11 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
                       {m.payload.analogies.map((analogy, index) => <p key={index}><strong>Analogy:</strong> {analogy}</p>)}
                     </div>
                     {m.payload.visualization_nodes.length > 0 && (
-                      <SocraticGraph topic={topic} payload={m.payload} />
+                      <SocraticGraph payload={m.payload} />
                     )}
                     <div className="markdown">
                       {m.payload.socratic_questions.map((item, index) => <p key={index}><strong>Let&apos;s explore:</strong> {item}</p>)}
+                      {m.payload.conversation_question && <p>{m.payload.conversation_question}</p>}
                     </div>
                   </>
                 ) : (

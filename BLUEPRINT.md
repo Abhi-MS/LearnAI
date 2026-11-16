@@ -22,12 +22,12 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 
 - [x] **Gemini JSON Schema Enforcement:** Use the Gemini SDK's `responseSchema` configuration for structured responses. Add `lib/types/socratic.ts` with strong types for `SocraticPayload`, including analogies, narrative text, Socratic questions, and graph arrays named `visualization_nodes` and `visualization_edges`.
 - [x] **UI Graphic Mapping Component:** Build an `app/` view that accepts the graph arrays and renders them as an interactive node graph using SVG coordinates or HTML/CSS blocks, rather than text blocks.
-- [x] **Socratic Conversation:** Start a topic with an explanation and thought-provoking question. Preserve conversation context during the active chat; adapt to the learner's demonstrated technical depth and use examples, analogies, and diagrams only when helpful.
+- [x] **Socratic Conversation:** Start a topic with an explanation. Preserve conversation context during the active chat; adapt to the learner's demonstrated technical depth and use examples, analogies, and diagrams only when helpful. End each response with an invitation to explore and offer occasional learning checks after several follow-ups when useful for the subtopic.
 - [x] **Current Sources Plan:** For fast-changing subjects, later integrate a vetted grounding or retrieval provider that returns attributable source links and retrieval dates, prioritizes authoritative sources, and discloses any external data transfer. Verify citations before displaying them; when sources are unavailable, clearly communicate uncertainty instead of inventing citations. The current tutor does not search for or verify sources.
 
 ### Milestone 4: Cognitive Science Integration & Assessment Workers
 
-- [x] **The Broken Diagram Test (Active Retrieval):** Randomly hide a central node or bridge-edge label from a validated visual graph. Let the learner answer or reveal it without blocking chat; an asynchronous Gemini request assesses submitted answers without changing levels.
+- [x] **The Broken Diagram Test (Active Retrieval):** Implemented diagram-label assessment, but automatic label hiding is disabled because it can obscure explanations and produce unhelpful questions. Diagrams now remain fully visible.
 - [x] **Contextual Interleaving Hooks:** Record successfully studied topics and, when a learner's question is directly related, offer a recall checkpoint for a recently studied different topic, including across explorations.
 
 ### Milestone 5: Stateless Session Termination & Summary Sync

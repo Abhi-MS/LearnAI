@@ -15,7 +15,8 @@ const edgeSchema = z.object({
 export const socraticPayloadSchema = z.object({
   narrative: z.string().trim().min(1).max(4000),
   analogies: z.array(z.string().trim().min(1).max(500)).max(2),
-  socratic_questions: z.array(z.string().trim().min(1).max(500)).min(1).max(2),
+  conversation_question: z.string().trim().min(1).max(500).optional(),
+  socratic_questions: z.array(z.string().trim().min(1).max(500)).max(2),
   visualization_nodes: z.array(nodeSchema).max(6),
   visualization_edges: z.array(edgeSchema).max(8),
 }).strict().superRefine((payload, context) => {
@@ -33,6 +34,11 @@ export const socraticPayloadSchema = z.object({
     }
   }
 });
+
+export const tutorResponseSchema = socraticPayloadSchema.refine(
+  (payload) => payload.conversation_question !== undefined,
+  { message: 'A conversation question is required.' },
+);
 
 export type SocraticPayload = z.infer<typeof socraticPayloadSchema>;
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import TutorPanel from "./tutor-panel";
 
@@ -14,6 +14,7 @@ function stubTutorFetch(fetchMock: (url: string, init?: RequestInit) => unknown)
 const payload = {
   narrative: "Lesson",
   analogies: ["A useful analogy"],
+  conversation_question: "Where could this idea take us next?",
   socratic_questions: ["What comes next?"],
   visualization_nodes: [
     { id: "a", label: "Start", description: "The starting point" },
@@ -38,7 +39,7 @@ it("keeps the disclaimer accessible without occupying chat space", async () => {
   expect(notice).not.toBeVisible();
   expect(onClose).not.toHaveBeenCalled();
   await screen.findByText("Lesson");
-  fireEvent.click(screen.getByRole("button", { name: "Reveal answer" }));
+  expect(screen.getByText(payload.conversation_question).closest(".bubble")?.lastElementChild).toHaveTextContent(payload.conversation_question);
   expect(screen.getByText(/Start → Finish: leads to/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Start" }));
   expect(screen.getByText(/The starting point/)).toBeInTheDocument();
@@ -57,6 +58,7 @@ it("sends the active conversation when the learner asks a follow-up", async () =
   expect(body.question).toBe("How does that work?");
   expect(body.history).toEqual([{ role: "tutor", payload }]);
   await waitFor(() => expect(screen.getAllByText("Lesson")).toHaveLength(2));
+  expect(screen.getAllByText(payload.conversation_question)).toHaveLength(2);
   fireEvent.change(screen.getByPlaceholderText("Ask about Concurrency…"), { target: { value: "And then?" } });
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
@@ -69,7 +71,7 @@ it("sends the active conversation when the learner asks a follow-up", async () =
 });
 
 it("renders a reply without a diagram or analogy and keeps it in conversation context", async () => {
-  const plainPayload = { ...payload, analogies: [], visualization_nodes: [], visualization_edges: [] };
+  const plainPayload = { ...payload, analogies: [], socratic_questions: [], visualization_nodes: [], visualization_edges: [] };
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ payload: plainPayload }) });
   stubTutorFetch(fetchMock);
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
@@ -82,27 +84,6 @@ it("renders a reply without a diagram or analogy and keeps it in conversation co
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   expect(JSON.parse(fetchMock.mock.calls[1][1].body).history).toEqual([{ role: "tutor", payload: plainPayload }]);
   await waitFor(() => expect(screen.getAllByText("Lesson")).toHaveLength(2));
-});
-
-it("keeps chat usable while a diagram answer is being assessed", async () => {
-  let finishAssessment!: (value: { ok: boolean; json: () => Promise<{ correct: boolean; feedback: string }> }) => void;
-  const pendingAssessment = new Promise<{ ok: boolean; json: () => Promise<{ correct: boolean; feedback: string }> }>(
-    (resolve) => { finishAssessment = resolve; },
-  );
-  const fetchMock = vi.fn((url: string) => url === "/api/tutor/assess"
-    ? pendingAssessment
-    : Promise.resolve({ ok: true, json: async () => ({ payload }) }));
-  stubTutorFetch(fetchMock);
-  render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
-  await screen.findByText("Lesson");
-  fireEvent.change(screen.getByLabelText(/Fill in the missing/), { target: { value: "A possible answer" } });
-  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
-  expect(screen.getByRole("button", { name: "Checking..." })).toBeDisabled();
-  fireEvent.change(screen.getByPlaceholderText("Ask about Concurrency…"), { target: { value: "Can we continue?" } });
-  fireEvent.click(screen.getByRole("button", { name: "Send" }));
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-  await act(async () => finishAssessment({ ok: true, json: async () => ({ correct: false, feedback: "Try again." }) }));
-  expect(screen.getByText("Try again.")).toBeInTheDocument();
 });
 
 it("keeps a failed question in context when the learner asks to retry", async () => {

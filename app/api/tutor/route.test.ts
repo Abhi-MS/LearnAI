@@ -8,6 +8,7 @@ vi.mock('../../../lib/db', () => ({ getPool: () => ({ query }) }));
 const payload = {
   narrative: 'An index is a sorted lookup structure.',
   analogies: ['Like a book index.'],
+  conversation_question: 'Where might indexes make the biggest difference?',
   socratic_questions: ['How would you find a page?'],
   visualization_nodes: [
     { id: 'index', label: 'Index', description: 'A lookup structure.' },
@@ -76,11 +77,12 @@ describe('POST /api/tutor', () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ payload });
+    await expect(response.json()).resolves.toEqual({ payload: { ...payload, socratic_questions: [] } });
     const request = generateContent.mock.calls[0][0];
     expect(request.config.maxOutputTokens).toBe(1600);
     expect(request.config.responseMimeType).toBe('application/json');
     expect(request.config.responseSchema.required).toContain('visualization_edges');
+    expect(request.config.responseSchema.required).toContain('conversation_question');
     expect(JSON.parse(request.contents).conversation[1]).toEqual({ role: 'user', text: 'What is a database?' });
   });
 
@@ -100,7 +102,7 @@ describe('POST /api/tutor', () => {
   });
 
   it('accepts responses and history without diagrams or analogies', async () => {
-    const plainPayload = { ...payload, analogies: [], visualization_nodes: [], visualization_edges: [] };
+    const plainPayload = { ...payload, analogies: [], socratic_questions: [], visualization_nodes: [], visualization_edges: [] };
     generateContent.mockClear();
     generateContent.mockResolvedValueOnce({ text: JSON.stringify(plainPayload) });
     const { POST } = await import('./route');
@@ -117,20 +119,37 @@ describe('POST /api/tutor', () => {
     const config = generateContent.mock.calls[0][0].config;
     expect(config.responseSchema.properties.visualization_nodes.minItems).toBeUndefined();
     expect(config.responseSchema.properties.analogies.minItems).toBeUndefined();
+    expect(config.responseSchema.properties.socratic_questions.minItems).toBeUndefined();
     expect(config.responseSchema.properties.narrative.maxLength).toBe('4000');
     expect(config.systemInstruction).toContain('adapt to the technical depth');
+    expect(config.systemInstruction).toContain('Do not add a graph for a simple explanation');
   });
 
   it('rejects malformed graph output rather than returning an invalid diagram', async () => {
     generateContent.mockResolvedValueOnce({
       text: JSON.stringify({ ...payload, visualization_edges: [{ source: 'index', target: 'missing', label: 'points to' }] }),
     });
+
     const { POST } = await import('./route');
     const response = await POST(new Request('http://localhost/api/tutor', {
       method: 'POST',
       body: JSON.stringify({ topicId, question: 'Explain it' }),
     }));
     expect(response.status).toBe(503);
+  });
+
+  it('rejects a response without a conversation question, but accepts older history without one', async () => {
+    const { conversation_question: _question, ...legacyPayload } = payload;
+    const { POST } = await import('./route');
+    const request = () => new Request('http://localhost/api/tutor', {
+      method: 'POST',
+      body: JSON.stringify({ topicId, question: 'Explain it', history: [{ role: 'tutor', payload: legacyPayload }] }),
+    });
+    const valid = await POST(request());
+    expect(valid.status).toBe(200);
+    expect((await valid.json()).payload.conversation_question).toBe(payload.conversation_question);
+    generateContent.mockResolvedValueOnce({ text: JSON.stringify(legacyPayload) });
+    expect((await POST(request())).status).toBe(503);
   });
 
   it('rejects an incomplete diagram', async () => {
@@ -183,7 +202,7 @@ describe('POST /api/tutor', () => {
       method: 'POST', body: JSON.stringify({ topicId, question: 'Explain' }),
     }));
     expect(unowned.status).toBe(404);
-    expect(query).toHaveBeenCalledWith(expect.stringContaining('t.user_id = $1 AND t.id = $2'), ['user-1', topicId, true, 50]);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('t.user_id = $1 AND t.id = $2'), ['user-1', topicId, false, 50]);
     expect(generateContent).not.toHaveBeenCalled();
   });
 
@@ -237,31 +256,36 @@ describe('POST /api/tutor', () => {
   });
 
   it('only adds a recall checkpoint when the latest question is judged related, including later in the session', async () => {
+    const quiet = { ...payload, socratic_questions: [] };
+    const history = [
+      { role: 'tutor', payload: quiet },
+      ...Array.from({ length: 3 }, (_, index) => [
+        { role: 'user', text: `Question ${index + 1}` }, { role: 'tutor', payload: quiet },
+      ]).flat(),
+    ];
     query.mockImplementation((sql: string, values: unknown[]) => sql.includes('SELECT t.title')
       ? { rows: [{ title: 'Database indexing', previous_topics: values[2] ? ['Concurrency', 'Transactions'] : [] }] }
       : { rowCount: 1 });
     generateContent
-      .mockResolvedValueOnce({ text: JSON.stringify({ ...payload, recall_topic_index: -1 }) })
-      .mockResolvedValueOnce({ text: JSON.stringify({ ...payload, recall_topic_index: 1 }) });
+      .mockResolvedValueOnce({ text: JSON.stringify({ ...quiet, recall_topic_index: -1 }) })
+      .mockResolvedValueOnce({ text: JSON.stringify({ ...quiet, recall_topic_index: 1 }) });
     const { POST } = await import('./route');
     const request = (question: string, history: unknown[]) => new Request('http://localhost/api/tutor', {
       method: 'POST', body: JSON.stringify({ topicId, question, history }),
     });
-    const first = await POST(request('What is an index?', [{ role: 'tutor', payload }]));
-    expect((await first.json()).payload.socratic_questions).toEqual(payload.socratic_questions);
+    const first = await POST(request('What is an index?', history));
+    expect((await first.json()).payload.socratic_questions).toEqual([]);
     expect(query.mock.calls[0][0]).toContain('h.user_id = $1 AND h.topic_id <> t.id');
     expect(JSON.parse(generateContent.mock.calls[0][0].contents).previously_studied_topics).toEqual(['Concurrency', 'Transactions']);
     expect(generateContent.mock.calls[0][0].config.systemInstruction).toContain('Use -1 for unrelated questions');
 
-    const later = await POST(request('How do atomic commits work?', [
-      { role: 'user', text: 'What is an index?' }, { role: 'tutor', payload },
-    ]));
+    const later = await POST(request('How do atomic commits work?', history));
     const laterPayload = (await later.json()).payload;
-    expect(laterPayload.socratic_questions[1]).toContain('Transactions');
+    expect(laterPayload.socratic_questions[0]).toContain('Transactions');
     expect(laterPayload).not.toHaveProperty('recall_topic_index');
 
     const afterRecall = await POST(request('What else?', [{ role: 'tutor', payload: laterPayload }]));
-    expect((await afterRecall.json()).payload.socratic_questions).toEqual(payload.socratic_questions);
+    expect((await afterRecall.json()).payload.socratic_questions).toEqual([]);
     expect(query.mock.calls[4][1]).toEqual(['user-1', topicId, false, 50]);
     expect(JSON.parse(generateContent.mock.calls[2][0].contents)).not.toHaveProperty('previously_studied_topics');
   });
@@ -271,9 +295,47 @@ describe('POST /api/tutor', () => {
     generateContent.mockResolvedValueOnce({ text: JSON.stringify({ ...payload, recall_topic_index: 4 }) });
     const { POST } = await import('./route');
     const response = await POST(new Request('http://localhost/api/tutor', {
-      method: 'POST', body: JSON.stringify({ topicId, question: 'How do atomic commits work?' }),
+      method: 'POST', body: JSON.stringify({ topicId, question: 'How do atomic commits work?', history: Array.from({ length: 3 }, () => [
+        { role: 'user', text: 'How does it work?' },
+        { role: 'tutor', payload: { ...payload, socratic_questions: [] } },
+      ]).flat() }),
     }));
     expect(response.status).toBe(503);
     expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('paces questions, including after a prior checkpoint and failed unanswered turns', async () => {
+    const quiet = { ...payload, socratic_questions: [] };
+    const turn = [{ role: 'user', text: 'Explain more' }, { role: 'tutor', payload: quiet }];
+    const { POST } = await import('./route');
+    const request = (history: unknown[]) => new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, question: 'Explain this part', history }),
+    });
+    const early = await POST(request([...turn, ...turn, { role: 'user', text: 'Retry' }]));
+    expect((await early.json()).payload.socratic_questions).toEqual([]);
+    expect(generateContent.mock.calls[0][0].config.systemInstruction).toContain('do not ask a learning-check question');
+
+    const ready = await POST(request([...turn, ...turn, ...turn]));
+    expect((await ready.json()).payload.socratic_questions).toEqual(payload.socratic_questions);
+    expect(generateContent.mock.calls[1][0].config.systemInstruction).toContain('same specific subtopic');
+
+    const afterQuestion = await POST(request([...turn, ...turn, ...turn, { role: 'tutor', payload }, ...turn, ...turn]));
+    expect((await afterQuestion.json()).payload.socratic_questions).toEqual([]);
+  });
+
+  it('does not stack a recall checkpoint on multiple generated questions', async () => {
+    const quiet = { ...payload, socratic_questions: [] };
+    const history = Array.from({ length: 3 }, () => [
+      { role: 'user', text: 'Explain more' }, { role: 'tutor', payload: quiet },
+    ]).flat();
+    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', previous_topics: ['Transactions'] }] });
+    generateContent.mockResolvedValueOnce({
+      text: JSON.stringify({ ...payload, socratic_questions: ['First question?', 'Second question?'], recall_topic_index: 0 }),
+    });
+    const { POST } = await import('./route');
+    const response = await POST(new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, question: 'Explain transactions', history }),
+    }));
+    expect((await response.json()).payload.socratic_questions).toEqual(['First question?']);
   });
 });
