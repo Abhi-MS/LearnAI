@@ -10,14 +10,13 @@ import {
   MAX_QUESTION_LENGTH,
   MAX_TOPIC_LENGTH,
   TutorLimitError,
-  type TutorLevel,
 } from '../../../lib/tutor';
 import { tutorHistorySchema } from '../../../lib/types/socratic';
 import { savedTopicNoteSchema } from '../../../lib/types/topic-note';
+import { conceptsSchema, levelSchema } from '../../../lib/types/quiz';
 
 export const dynamic = 'force-dynamic';
 
-const LEVELS: TutorLevel[] = ['Beginner', 'Advanced', 'Pro', 'Job Ready'];
 const MAX_RECALL_TOPICS = 50;
 
 export async function POST(request: Request) {
@@ -30,8 +29,6 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const topicId = z.uuid().safeParse(body?.topicId);
   const question = typeof body?.question === 'string' ? body.question.trim() : '';
-  const level: TutorLevel = LEVELS.includes(body?.level) ? body.level : 'Beginner';
-
   const mode = body?.mode === 'lesson' ? 'lesson' : 'chat';
 
   if (!topicId.success || (mode === 'chat' && !question)) {
@@ -56,8 +53,10 @@ export async function POST(request: Request) {
     const topicResult = await getPool().query<{
       title: string; previous_topics: string[]; saved_note: string | null;
       saved_depth: string | null; saved_next_step: string | null; saved_revision: number | null;
+      level: string; quiz_concepts: unknown;
     }>(
-      `SELECT t.title, n.note AS saved_note, n.depth AS saved_depth,
+      `SELECT t.title, COALESCE(p.level, 'Beginner') AS level, qp.concepts AS quiz_concepts,
+       n.note AS saved_note, n.depth AS saved_depth,
        n.next_step AS saved_next_step, n.revision AS saved_revision, CASE WHEN $3::boolean THEN ARRAY(
         SELECT previous.title
         FROM topic_study_history h
@@ -69,6 +68,8 @@ export async function POST(request: Request) {
       ) ELSE ARRAY[]::text[] END AS previous_topics
       FROM custom_topics t
       LEFT JOIN topic_notes n ON n.user_id = t.user_id AND n.topic_id = t.id
+      LEFT JOIN topic_progress p ON p.user_id = t.user_id AND p.topic_id = t.id
+      LEFT JOIN topic_quiz_plans qp ON qp.user_id = t.user_id AND qp.topic_id = t.id AND qp.level = COALESCE(p.level, 'Beginner')
       WHERE t.user_id = $1 AND t.id = $2`,
       [auth.user.id, topicId.data, canRecall, MAX_RECALL_TOPICS],
     );
@@ -82,8 +83,9 @@ export async function POST(request: Request) {
     });
     const resumeNote = savedNote && { note: savedNote.note, depth: savedNote.depth, nextStep: savedNote.nextStep };
     const { payload, recallTopic } = await askTutor({
-      userId: auth.user.id, topic: topic.title, level, question, mode, history: history.data,
+      userId: auth.user.id, topic: topic.title, level: levelSchema.parse(topic.level), question, mode, history: history.data,
       previousTopics: topic.previous_topics, resumeNote,
+      quizConcepts: topic.quiz_concepts == null ? undefined : conceptsSchema.parse(topic.quiz_concepts),
     });
     if (mode === 'chat') {
       const saved = await getPool().query(

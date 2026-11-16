@@ -17,6 +17,12 @@ export const socraticPayloadSchema = z.object({
   analogies: z.array(z.string().trim().min(1).max(500)).max(2),
   conversation_question: z.string().trim().min(1).max(500).optional(),
   socratic_questions: z.array(z.string().trim().min(1).max(500)).max(2),
+  quiz_coverage: z.object({
+    covered: z.array(z.number().int().min(0).max(4)).max(5)
+      .refine((indexes) => new Set(indexes).size === indexes.length),
+    additional: z.array(z.string().trim().min(1).max(200)).max(5),
+    ready: z.boolean(),
+  }).strict().optional(),
   visualization_nodes: z.array(nodeSchema).max(6),
   visualization_edges: z.array(edgeSchema).max(8),
 }).strict().superRefine((payload, context) => {

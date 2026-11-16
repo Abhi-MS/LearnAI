@@ -29,6 +29,8 @@ export async function GET() {
               'topics', COALESCE((
                 SELECT json_agg(json_build_object(
                   'id', t.id, 'title', t.title,
+                  'level', COALESCE((SELECT p.level FROM topic_progress p WHERE p.user_id = t.user_id AND p.topic_id = t.id), 'Beginner'),
+                  'completed', COALESCE((SELECT p.completed FROM topic_progress p WHERE p.user_id = t.user_id AND p.topic_id = t.id), FALSE),
                   'hasNote', EXISTS (SELECT 1 FROM topic_notes n WHERE n.user_id = t.user_id AND n.topic_id = t.id)
                 ) ORDER BY t.created_at, t.id)
                 FROM custom_topics t WHERE t.user_id = c.user_id AND t.category_id = c.id

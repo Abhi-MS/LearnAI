@@ -4,13 +4,14 @@ import { afterEach, expect, it, vi } from "vitest";
 import TopicsList from "./topics-list";
 
 vi.mock("./auth-button", () => ({ default: () => null }));
+vi.mock("./quiz-panel", () => ({ default: () => null }));
 
 const firstId = "c0a80101-0000-4000-8000-000000000001";
 const secondId = "c0a80101-0000-4000-8000-000000000002";
 const plan = {
   activeAreaId: "area",
   areas: [{ id: "area", name: "Science", categories: [{
-    id: "category", name: "Science", topics: [{ id: firstId, title: "Water", hasNote: true }, { id: secondId, title: "Weather", hasNote: false }],
+    id: "category", name: "Science", topics: [{ id: firstId, title: "Water", hasNote: true, level: "Beginner", completed: false }, { id: secondId, title: "Weather", hasNote: false, level: "Beginner", completed: false }],
   }] }],
 };
 const payload = {

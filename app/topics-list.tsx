@@ -7,13 +7,11 @@ import TopicNotesPreview from "./topic-notes-preview";
 import { LEVELS, type Level } from "../lib/levels";
 import { MAX_CATEGORY_LENGTH, MAX_LEARNING_GOAL_LENGTH, MAX_TOPIC_LENGTH } from "../lib/topic-limits";
 
-type Topic = { id: string; title: string; hasNote: boolean };
+type Topic = { id: string; title: string; hasNote: boolean; level: Level; completed: boolean };
 type Category = { id: string; name: string; topics: Topic[] };
 type Area = { id: string; name: string; categories: Category[] };
 type Plan = { activeAreaId: string | null; areas: Area[] };
 type SelectedTopic = Topic & { categoryId: string };
-
-const STORAGE_KEY = "learnai:levels";
 
 async function readResponse(response: Response) {
   const data = await response.json();
@@ -41,7 +39,6 @@ export default function TopicsList() {
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [levels, setLevels] = useState<Record<string, Level>>({});
   const tutorRef = useRef<TutorPanelHandle>(null);
   const leavingRef = useRef(false);
   const pendingLeaveRef = useRef<(() => void) | null>(null);
@@ -57,6 +54,20 @@ export default function TopicsList() {
         })),
       })),
     });
+  }
+
+  function updateTopicProgress(topicId: string, level: Level, completed: boolean) {
+    setPlan((current) => current && {
+      ...current,
+      areas: current.areas.map((area) => ({
+        ...area,
+        categories: area.categories.map((item) => ({
+          ...item,
+          topics: item.topics.map((topic) => topic.id === topicId ? { ...topic, level, completed } : topic),
+        })),
+      })),
+    });
+    setSelected((current) => current?.id === topicId ? { ...current, level, completed } : current);
   }
 
   async function requestLeave(action: () => void) {
@@ -96,11 +107,6 @@ export default function TopicsList() {
   }
 
   useEffect(() => {
-    try {
-      setLevels(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"));
-    } catch {
-      setLevels({});
-    }
     loadPlan();
   }, []);
 
@@ -154,9 +160,9 @@ export default function TopicsList() {
         const found = area.categories.some((item) => item.id === data.category.id);
         const categories = found
           ? area.categories.map((item) => item.id === data.category.id
-            ? { ...item, topics: [...item.topics, { id: data.topic.id, title: data.topic.title, hasNote: false }] }
+            ? { ...item, topics: [...item.topics, { id: data.topic.id, title: data.topic.title, hasNote: false, level: LEVELS[0], completed: false }] }
             : item)
-          : [...area.categories, { ...data.category, topics: [{ id: data.topic.id, title: data.topic.title, hasNote: false }] }];
+          : [...area.categories, { ...data.category, topics: [{ id: data.topic.id, title: data.topic.title, hasNote: false, level: LEVELS[0], completed: false }] }];
         return { ...current, areas: current.areas.map((item) => item.id === area.id ? { ...item, categories } : item) };
       });
       setTitle("");
@@ -334,7 +340,7 @@ export default function TopicsList() {
                       setOpenNoteId(null);
                       if (selected?.id !== topic.id) void requestLeave(() => setSelected({ ...topic, categoryId: item.id }));
                     }}>
-                      <span>{topic.title}</span><span className="level-chip">{levels[`custom-${topic.id}`] ?? LEVELS[0]}</span>
+                      <span>{topic.title}{topic.completed && <span aria-label="Topic complete"> ✓</span>}</span><span className="level-chip">{topic.level}</span>
                     </button>
                     {topic.hasNote && <TopicNotesPreview
                       topicId={topic.id}
@@ -348,7 +354,7 @@ export default function TopicsList() {
               </ul>
               {confirmDelete?.id === item.id && (
                 <div className="delete-confirmation" role="group" aria-labelledby={`delete-title-${item.id}`}>
-                  <p id={`delete-title-${item.id}`}>Delete {item.name}, all its topics, and their saved notes permanently?</p>
+                  <p id={`delete-title-${item.id}`}>Delete {item.name}, all its topics, saved notes, and quiz progress permanently?</p>
                   {deleteError && <p className="status status-error" role="alert">{deleteError}</p>}
                   <div className="delete-actions">
                     <button type="button" className="chip-button" disabled={deleting} onClick={() => setConfirmDelete(null)}>Cancel</button>
@@ -366,11 +372,13 @@ export default function TopicsList() {
         ref={tutorRef}
         topicId={selected?.id ?? null}
         topic={selected?.title ?? null}
-        level={selected ? levels[`custom-${selected.id}`] ?? LEVELS[0] : LEVELS[0]}
+        level={selected?.level ?? LEVELS[0]}
+        completed={selected?.completed ?? false}
         onClose={() => { void requestLeave(() => setSelected(null)); }}
         onRetryLeave={() => { if (pendingLeaveRef.current) void requestLeave(pendingLeaveRef.current); }}
         onDiscardLeave={discardAndLeave}
         onNoteSaved={markTopicHasNote}
+        onProgress={(level, completed) => { if (selected) updateTopicProgress(selected.id, level, completed); }}
       />
     </>
   );

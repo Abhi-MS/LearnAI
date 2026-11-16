@@ -8,7 +8,7 @@ vi.mock("./tutor-panel", () => ({
 }));
 vi.mock("./auth-button", () => ({ default: () => null }));
 
-const category = { id: "1", name: "Photography", topics: [{ id: "topic-1", title: "Lighting", hasNote: false }] };
+const category = { id: "1", name: "Photography", topics: [{ id: "topic-1", title: "Lighting", hasNote: false, level: "Beginner", completed: false }] };
 const area = { id: "area-1", name: "Photography", categories: [category] };
 const plan = { activeAreaId: area.id, areas: [area] };
 const ok = (data: unknown) => ({ ok: true, json: async () => data });
@@ -17,6 +17,15 @@ const failed = (error: string) => ({ ok: false, json: async () => ({ error }) })
 afterEach(() => vi.unstubAllGlobals());
 
 describe("learning plan", () => {
+  it("shows stored assessment progress and completion", async () => {
+    const completed = { ...category, topics: [{ ...category.topics[0], level: "Job Ready", completed: true }] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(ok({ ...plan, areas: [{ ...area, categories: [completed] }] })));
+    render(<TopicsList />);
+    const topic = await screen.findByRole("button", { name: /Lighting/ });
+    expect(topic).toHaveTextContent("Job Ready");
+    expect(within(topic).getByLabelText("Topic complete")).toBeInTheDocument();
+  });
+
   it("onboards a user, saves a goal and loads their categories", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(ok({ activeAreaId: null, areas: [] }))
@@ -100,7 +109,7 @@ describe("learning plan", () => {
   });
 
   it("adds a separate exploration and switches back without mixing categories", async () => {
-    const music = { id: "area-2", name: "Music", categories: [{ id: "2", name: "Theory", topics: [{ id: "m", title: "Rhythm" }] }] };
+    const music = { id: "area-2", name: "Music", categories: [{ id: "2", name: "Theory", topics: [{ id: "m", title: "Rhythm", hasNote: false, level: "Beginner", completed: false }] }] };
     const fetchMock = vi.fn().mockResolvedValueOnce(ok(plan))
       .mockResolvedValueOnce(ok({ ok: true }))
       .mockResolvedValueOnce(ok({ activeAreaId: music.id, areas: [area, music] }))

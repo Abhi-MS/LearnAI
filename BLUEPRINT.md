@@ -42,10 +42,10 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 
 ### Milestone 6: Assessment & Evidence-Based Progress
 
-- [ ] **Quiz Planning and Readiness:** When a learner starts a topic, have the observing agent plan a structured quiz for their current level and the concepts it covers. Track which concepts the conversation has covered, including relevant advanced material, and let the agent suggest the quiz when it judges the learner ready. This judgment is a prompt, not proof of mastery.
-- [ ] **Learner-Led Conversation:** Use the planned concepts to guide the tutor when appropriate, but prioritize the learner's questions and follow their interests, even when they lead to more advanced material. Quiz suggestions must be optional so the learner can defer and continue chatting.
-- [ ] **Validated Promotion:** Validate quiz answers with a second-pass check. Promote the learner to the next level for that topic when their validated score is at least 80% correct; otherwise keep their current level. Record quiz results and recurring concept gaps as evidence.
-- [ ] **Visible Progress:** Show each topic's current level and update its level badge and dashboard checkmarks from logged assessment outcomes, not conversational quality or summary evaluation markers.
+- [x] **Quiz Planning and Readiness:** Prepare a five-concept plan for the topic's current level, track discussed planned and additional concepts, and offer an optional suggestion when useful. This judgment is a prompt, not proof of mastery.
+- [x] **Learner-Led Conversation:** Use the planned concepts to guide the tutor when appropriate, but prioritize the learner's questions and follow their interests, even when they lead to more advanced material. Quiz suggestions are optional.
+- [x] **Validated Promotion:** Validate five mixed-format quiz answers with two independent checks. Promote the learner when the validated score is at least 80% correct; otherwise keep their current level. Record quiz results and recurring concept gaps as evidence.
+- [x] **Visible Progress:** Show the persisted topic level and mark completion after passing Job Ready. Badges and checkmarks are based on recorded assessments, not conversational quality or summary evaluation markers.
 
 ### Milestone 7: Evaluation Set
 
@@ -64,4 +64,5 @@ The current app foundation includes sign-in, personal learning plans, topic sele
 - Keep the first delivery focused on the loop: track selection, topic, a single tutor, structured quiz generation, validation, and evidence-based progress.
 - Add the background assessor only after the Socratic tutoring loop is working; it validates retrieval challenges and can suggest quizzes, while validated quiz outcomes determine level progression.
 - Use explicit tool calls for learner-state access so the tutor remains auditable and the app remains truthful about what is actually measured.
-- The baseline migrations define `sessions` and `concept_gaps`, but not `concepts` or `topic_sessions`; Milestones 4 and 5 add `topic_study_history` and `topic_notes` instead.
+- Assessment operations currently use explicit server-side functions and user-initiated API actions, not Gemini function-calling tools; model-initiated learner-state tool access remains future work.
+- The baseline migrations define `sessions` and `concept_gaps` for legacy curated topics. Milestones 4–6 use separate tables for personal topics: `topic_study_history`, `topic_notes`, `topic_progress`, `topic_quiz_plans`, `topic_quiz_attempts`, `topic_quiz_results`, and `topic_concept_gaps`.

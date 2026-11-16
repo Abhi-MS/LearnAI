@@ -8,6 +8,7 @@ import { tutorResponseSchema, type SocraticPayload, type TutorHistory } from "..
 import { savedTopicNoteSchema, type SavedTopicNote } from "../lib/types/topic-note";
 import { fetchTopicNote } from "../lib/topic-note-client";
 import SocraticGraph from "./socratic-graph";
+import QuizPanel from "./quiz-panel";
 
 const MAX_QUESTION_LENGTH = 500;
 
@@ -45,18 +46,22 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
   topicId: string | null;
   topic: string | null;
   level: Level;
+  completed?: boolean;
   onClose: () => void;
   onRetryLeave?: () => void;
   onDiscardLeave?: () => void;
   onNoteSaved?: (topicId: string) => void;
+  onProgress?: (level: Level, completed: boolean) => void;
 }>(function TutorPanel({
   topicId,
   topic,
   level,
+  completed = false,
   onClose,
   onRetryLeave,
   onDiscardLeave,
   onNoteSaved,
+  onProgress,
 }, ref) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [history, setHistory] = useState<TutorHistory>([]);
@@ -66,9 +71,12 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
   const [saveError, setSaveError] = useState("");
   const [savedNote, setSavedNote] = useState<SavedTopicNote | null>(null);
   const [noteError, setNoteError] = useState("");
+  const [quizCoverage, setQuizCoverage] = useState<SocraticPayload["quiz_coverage"]>();
   const endRef = useRef<HTMLDivElement>(null);
   const noticeRef = useRef<HTMLDetailsElement>(null);
   const savingRef = useRef(false);
+  const levelRef = useRef(level);
+  levelRef.current = level;
   const savedHistoryRef = useRef("");
   const open = topic !== null;
 
@@ -80,6 +88,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
     }
     try {
       const payload = await callTutor(request);
+      if (request.level === levelRef.current) setQuizCoverage(payload.quiz_coverage);
       setMessages((m) => [...m, { role: "tutor", payload }]);
       setHistory((previous) => [...previous, { role: "tutor", payload }]);
     } catch (error) {
@@ -175,6 +184,8 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
     endRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [messages, loading]);
 
+  useEffect(() => { setQuizCoverage(undefined); }, [level]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -216,7 +227,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
             <div className="drawer-actions">
               <details className="tutor-notice" ref={noticeRef}>
                 <summary>AI &amp; privacy</summary>
-                <p className="privacy-notice tutor-notice-content">Your topic and active conversation are sent to Google Gemini. A generated topic note is saved and sent back to Gemini when you return. Names of recently studied topics may also be sent to check their relevance. Don&apos;t include sensitive or confidential information. AI responses can be inaccurate or outdated; verify important details with reliable sources.</p>
+                <p className="privacy-notice tutor-notice-content">Your topic, active conversation, quiz questions and answers are sent to Google Gemini. Quiz plans, questions, answer keys, results, feedback and missed concepts are saved. A generated topic note is saved and sent back to Gemini when you return. Names of recently studied topics may also be sent to check their relevance. Don&apos;t include sensitive or confidential information. AI responses and grading can be inaccurate or outdated; verify important details with reliable sources.</p>
               </details>
               <button type="button" className="link-button" onClick={onClose} aria-label="Close tutor">
                 ✕
@@ -267,6 +278,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
             <div ref={endRef} />
           </div>
 
+          {topicId && <QuizPanel topicId={topicId} level={level} completed={completed} coverage={quizCoverage} onProgress={(nextLevel, complete) => onProgress?.(nextLevel, complete)} />}
           <form onSubmit={ask} className="composer">
             <textarea
               value={question}

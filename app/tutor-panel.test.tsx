@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import TutorPanel from "./tutor-panel";
 
+vi.mock("./quiz-panel", () => ({ default: () => null }));
 afterEach(() => vi.unstubAllGlobals());
 
 function stubTutorFetch(fetchMock: (url: string, init?: RequestInit) => unknown) {
@@ -30,11 +31,11 @@ it("keeps the disclaimer accessible without occupying chat space", async () => {
   }));
   const onClose = vi.fn();
   render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={onClose} />);
-  const notice = screen.getByText(/AI responses can be inaccurate or outdated/);
+  const notice = screen.getByText(/AI responses and grading can be inaccurate or outdated/);
   expect(notice).not.toBeVisible();
   fireEvent.click(screen.getByText("AI & privacy"));
   expect(notice).toBeVisible();
-  expect(notice).toHaveTextContent("active conversation are sent to Google Gemini");
+  expect(notice).toHaveTextContent("active conversation, quiz questions and answers are sent to Google Gemini");
   fireEvent.keyDown(window, { key: "Escape" });
   expect(notice).not.toBeVisible();
   expect(onClose).not.toHaveBeenCalled();

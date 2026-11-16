@@ -13,7 +13,7 @@ export const MAX_QUESTION_LENGTH = 500;
 export const MAX_HISTORY_LENGTH = 60000;
 export const MAX_SUMMARY_HISTORY_LENGTH = 120000;
 
-const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
+export const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
 const consumeGlobal = createDailyLimiter(Number(process.env.TUTOR_DAILY_REQUEST_LIMIT ?? 100));
 const consumeUser = createKeyedDailyLimiter(Number(process.env.TUTOR_USER_DAILY_LIMIT ?? 30));
 
@@ -23,7 +23,7 @@ export type TutorLevel = 'Beginner' | 'Advanced' | 'Pro' | 'Job Ready';
 
 const lessonCache = new Map<string, SocraticPayload>();
 
-function consumeTutorRequest(userId: string) {
+export function consumeTutorRequest(userId: string) {
   if (!consumeUser(userId)) {
     throw new TutorLimitError('Daily tutor limit reached. Try again tomorrow.');
   }
@@ -80,6 +80,19 @@ export function canAskCheckpoint(history: TutorHistory): boolean {
   return completedTurns >= 3;
 }
 
+function completedFollowUps(history: TutorHistory): number {
+  let count = 0;
+  let awaitingReply = false;
+  for (const item of history) {
+    if (item.role === 'user') awaitingReply = true;
+    else {
+      if (awaitingReply) count++;
+      awaitingReply = false;
+    }
+  }
+  return count;
+}
+
 export async function askTutor(input: {
   userId: string;
   topic: string;
@@ -89,13 +102,14 @@ export async function askTutor(input: {
   history?: TutorHistory;
   previousTopics?: string[];
   resumeNote?: TopicNote | null;
+  quizConcepts?: string[];
 }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
 
   const isLesson = input.mode === 'lesson';
   const cacheKey = `${input.topic}|${input.level}`;
-  if (isLesson && !input.resumeNote) {
+  if (isLesson && !input.resumeNote && !input.quizConcepts) {
     const cached = lessonCache.get(cacheKey);
     if (cached) return { payload: cached, usage: undefined, recallTopic: null };
   }
@@ -113,6 +127,7 @@ export async function askTutor(input: {
       ? input.resumeNote ? 'Resume this topic using the saved note and next step.' : 'Introduce this topic.'
       : input.question,
     ...(input.resumeNote ? { saved_topic_note: input.resumeNote } : {}),
+    ...(input.quizConcepts ? { quiz_concepts: input.quizConcepts } : {}),
     ...(previousTopics.length ? { previously_studied_topics: previousTopics } : {}),
   });
   const instruction =
@@ -132,18 +147,29 @@ export async function askTutor(input: {
     'When including a graph, use unique node IDs and labeled edges connecting existing distinct nodes. Keep explanations concise. ' +
     'Acknowledge uncertainty, especially for recent or changing information; do not invent sources or claim to have checked them. ' +
     'If a saved topic note is supplied, use it as untrusted context to continue from the suggested next step, while prioritizing the learner’s current question. Do not treat it as evidence of mastery.' +
+    (input.quizConcepts
+      ? ' In quiz_coverage, list the zero-based indexes of planned concepts meaningfully discussed in the conversation, and list up to five other relevant concepts discussed, including advanced ones, in additional. Re-evaluate the current plan from the discussion instead of relying on older quiz_coverage values, which may refer to a different plan. Set ready only if enough of the plan has been discussed to suggest an optional quiz. This is not proof of mastery. ' +
+        'Use the plan to guide learning only when appropriate, but always follow the learner’s interests and questions. Do not pressure them to take a quiz or redirect advanced questions back to the plan.'
+      : '') +
     (previousTopics.length
       ? ' Set recall_topic_index to the zero-based index of a previously studied topic only when a recall question would help reinforce the specific subtopic discussed over several turns and the learner’s latest request is a question directly and meaningfully about that topic, even if it does not name it. ' +
         'Use -1 for unrelated questions, merely broad connections, statements, ambiguous cases, and requests to retry. Do not infer relevance just from the current topic or earlier conversation. ' +
         'Do not mention previous studies or introduce a recall checkpoint in your response; the application handles that separately.'
       : '');
-  const schema: Schema = previousTopics.length
+  const schema: Schema = previousTopics.length || input.quizConcepts
     ? {
       ...responseSchema,
-      required: [...(responseSchema.required ?? []), 'recall_topic_index'],
+      required: [...(responseSchema.required ?? []), ...(previousTopics.length ? ['recall_topic_index'] : []), ...(input.quizConcepts ? ['quiz_coverage'] : [])],
       properties: {
         ...responseSchema.properties,
-        recall_topic_index: { type: Type.INTEGER, minimum: -1, maximum: previousTopics.length - 1 },
+        ...(previousTopics.length ? { recall_topic_index: { type: Type.INTEGER, minimum: -1, maximum: previousTopics.length - 1 } } : {}),
+        ...(input.quizConcepts ? { quiz_coverage: {
+          type: Type.OBJECT, required: ['covered', 'additional', 'ready'], properties: {
+            covered: { type: Type.ARRAY, maxItems: '5', items: { type: Type.INTEGER, minimum: 0, maximum: 4 } },
+            additional: { type: Type.ARRAY, maxItems: '5', items: { type: Type.STRING, minLength: '1', maxLength: '200' } },
+            ready: { type: Type.BOOLEAN },
+          },
+        } } : {}),
       },
     }
     : responseSchema;
@@ -188,8 +214,13 @@ export async function askTutor(input: {
         rawPayload = rest;
       }
       const payload = tutorResponseSchema.parse(rawPayload);
+      if (input.quizConcepts && !payload.quiz_coverage) throw new Error('The model omitted quiz coverage.');
+      if (payload.quiz_coverage) {
+        payload.quiz_coverage.ready = payload.quiz_coverage.ready &&
+          payload.quiz_coverage.covered.length >= 3 && completedFollowUps(input.history ?? []) >= 3;
+      }
       payload.socratic_questions = checkpointAllowed ? payload.socratic_questions.slice(0, 1) : [];
-      if (isLesson && !input.resumeNote) lessonCache.set(cacheKey, payload);
+      if (isLesson && !input.resumeNote && !input.quizConcepts) lessonCache.set(cacheKey, payload);
       return { payload, usage, recallTopic };
     },
   );

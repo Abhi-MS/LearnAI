@@ -40,7 +40,7 @@ beforeEach(() => {
   process.env.GEMINI_API_KEY = 'test-key';
   generateContent.mockReset().mockResolvedValue({ text: JSON.stringify(payload) });
   query.mockReset().mockImplementation((sql: string) => sql.includes('SELECT t.title')
-    ? { rows: [{ title: 'Database indexing', previous_topics: [] }] }
+    ? { rows: [{ title: 'Database indexing', level: 'Beginner', previous_topics: [] }] }
     : { rowCount: 1 });
 });
 
@@ -224,7 +224,7 @@ describe('POST /api/tutor', () => {
   });
 
   it('surfaces study-history write failures rather than reporting success', async () => {
-    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', previous_topics: [] }] })
+    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', level: 'Beginner', previous_topics: [] }] })
       .mockRejectedValueOnce(new Error('database unavailable'));
     const { POST } = await import('./route');
     const response = await POST(new Request('http://localhost/api/tutor', {
@@ -235,10 +235,10 @@ describe('POST /api/tutor', () => {
 
   it('resumes with the owned saved note and does not cache personalized lessons', async () => {
     query.mockResolvedValueOnce({ rows: [{
-      title: 'Database indexing', previous_topics: [], saved_note: 'Previous session A',
+      title: 'Database indexing', level: 'Beginner', previous_topics: [], saved_note: 'Previous session A',
       saved_depth: 'developing', saved_next_step: 'Explore indexes', saved_revision: 1,
     }] }).mockResolvedValueOnce({ rows: [{
-      title: 'Database indexing', previous_topics: [], saved_note: 'Previous session B',
+      title: 'Database indexing', level: 'Beginner', previous_topics: [], saved_note: 'Previous session B',
       saved_depth: 'introductory', saved_next_step: 'Explore tables', saved_revision: 2,
     }] });
     const { POST } = await import('./route');
@@ -264,7 +264,7 @@ describe('POST /api/tutor', () => {
       ]).flat(),
     ];
     query.mockImplementation((sql: string, values: unknown[]) => sql.includes('SELECT t.title')
-      ? { rows: [{ title: 'Database indexing', previous_topics: values[2] ? ['Concurrency', 'Transactions'] : [] }] }
+      ? { rows: [{ title: 'Database indexing', level: 'Beginner', previous_topics: values[2] ? ['Concurrency', 'Transactions'] : [] }] }
       : { rowCount: 1 });
     generateContent
       .mockResolvedValueOnce({ text: JSON.stringify({ ...quiet, recall_topic_index: -1 }) })
@@ -291,7 +291,7 @@ describe('POST /api/tutor', () => {
   });
 
   it('rejects invalid relevance selections without saving study history', async () => {
-    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', previous_topics: ['Transactions'] }] });
+    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', level: 'Beginner', previous_topics: ['Transactions'] }] });
     generateContent.mockResolvedValueOnce({ text: JSON.stringify({ ...payload, recall_topic_index: 4 }) });
     const { POST } = await import('./route');
     const response = await POST(new Request('http://localhost/api/tutor', {
@@ -323,12 +323,46 @@ describe('POST /api/tutor', () => {
     expect((await afterQuestion.json()).payload.socratic_questions).toEqual([]);
   });
 
+  it('uses the saved level and planned concepts, and does not suggest a quiz prematurely', async () => {
+    const concepts = ['A', 'B', 'C', 'D', 'E'];
+    query.mockResolvedValueOnce({ rows: [{
+      title: 'Database indexing', level: 'Advanced', previous_topics: [], quiz_concepts: concepts,
+    }] });
+    generateContent.mockResolvedValueOnce({
+      text: JSON.stringify({ ...payload, quiz_coverage: { covered: [0, 1, 2], additional: ['Advanced use'], ready: true } }),
+    });
+    const { POST } = await import('./route');
+    const response = await POST(new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, level: 'Job Ready', question: 'Explain it' }),
+    }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).payload.quiz_coverage).toEqual({ covered: [0, 1, 2], additional: ['Advanced use'], ready: false });
+    const sent = JSON.parse(generateContent.mock.calls[0][0].contents);
+    expect(sent.level).toBe('Advanced');
+    expect(sent.quiz_concepts).toEqual(concepts);
+    expect(generateContent.mock.calls[0][0].config.systemInstruction).toContain('always follow the learner');
+
+    query.mockResolvedValueOnce({ rows: [{
+      title: 'Database indexing', level: 'Advanced', previous_topics: [], quiz_concepts: concepts,
+    }] });
+    generateContent.mockResolvedValueOnce({
+      text: JSON.stringify({ ...payload, quiz_coverage: { covered: [0, 1, 2], additional: ['Advanced use'], ready: true } }),
+    });
+    const history = Array.from({ length: 3 }, () => [
+      { role: 'user', text: 'Explain more' }, { role: 'tutor', payload: { ...payload, socratic_questions: [] } },
+    ]).flat();
+    const ready = await POST(new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, question: 'Continue', history }),
+    }));
+    expect((await ready.json()).payload.quiz_coverage.ready).toBe(true);
+  });
+
   it('does not stack a recall checkpoint on multiple generated questions', async () => {
     const quiet = { ...payload, socratic_questions: [] };
     const history = Array.from({ length: 3 }, () => [
       { role: 'user', text: 'Explain more' }, { role: 'tutor', payload: quiet },
     ]).flat();
-    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', previous_topics: ['Transactions'] }] });
+    query.mockResolvedValueOnce({ rows: [{ title: 'Database indexing', level: 'Beginner', previous_topics: ['Transactions'] }] });
     generateContent.mockResolvedValueOnce({
       text: JSON.stringify({ ...payload, socratic_questions: ['First question?', 'Second question?'], recall_topic_index: 0 }),
     });
