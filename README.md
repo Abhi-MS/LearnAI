@@ -16,10 +16,14 @@ There are no required lesson lengths or streaks. And a good-sounding conversatio
 
 **[Try the live demo](https://learn-ai-silk.vercel.app/)** — select **Sign in with Google** to use your Google account.
 
-![LearnAI learning plan and tutor conversation](demo-tutor.png)
+![LearnAI learning plan, tutor conversation, and quiz panel in the library-inspired theme](demo-library.png)
+
+The screenshot shows the updated theme; the live demo may look different until it is deployed.
 
 <details>
-<summary>Demo sign-in screen</summary>
+<summary>Earlier demo screenshots</summary>
+
+![LearnAI learning plan and tutor conversation](demo-tutor.png)
 
 ![LearnAI demo sign-in screen](demo.png)
 
