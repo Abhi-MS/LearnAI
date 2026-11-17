@@ -14,6 +14,17 @@ LearnAI is built around a simple idea: **learning should follow your curiosity, 
 
 There are no required lesson lengths or streaks. And a good-sounding conversation is not treated as proof that you learned something: progress comes from validated quiz results.
 
+**[Try the live demo](https://learn-ai-silk.vercel.app/)** — select **Sign in with Google** to use your Google account.
+
+![LearnAI learning plan and tutor conversation](demo-tutor.png)
+
+<details>
+<summary>Demo sign-in screen</summary>
+
+![LearnAI demo sign-in screen](demo.png)
+
+</details>
+
 ## The learning loop
 
 1. **Choose your direction.** Describe an industry, skill, or subject. LearnAI creates a starting plan, and you can change it, add topics, or keep separate explorations.
@@ -31,7 +42,7 @@ There are no required lesson lengths or streaks. And a good-sounding conversatio
 
 ## Project status
 
-The core learning loop is implemented: sign-in, personal learning plans, topic management, tutoring, resumable topic notes, quizzes, and evidence-based progress. Evaluation and deployment are still planned. See the [product blueprint](BLUEPRINT.md) for the principles behind the project and what is next.
+The core learning loop is implemented: sign-in, personal learning plans, topic management, tutoring, resumable topic notes, quizzes, and evidence-based progress. A demo is available on Vercel; formal evaluation and Azure deployment are still planned. See the [product blueprint](BLUEPRINT.md) for the principles behind the project and what is next.
 
 ## Run locally
 
