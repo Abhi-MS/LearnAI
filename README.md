@@ -14,7 +14,7 @@ LearnAI is built around a simple idea: **learning should follow your curiosity, 
 
 There are no required lesson lengths or streaks. And a good-sounding conversation is not treated as proof that you learned something: progress comes from validated quiz results.
 
-**[Try the live demo](https://learn-ai-silk.vercel.app/)** — select **Sign in with Google** to use your Google account.
+**[Try the live demo](https://learn-ai-silk.vercel.app/)** — sign in with Google, or continue as a guest once the guest-access update is deployed and configured.
 
 ![LearnAI learning plan, tutor conversation, and quiz panel in the library-inspired theme](demo-library.png)
 
@@ -53,7 +53,8 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
 ### You will need
 
 - Node.js 20 or later
-- A Supabase project with Google sign-in configured
+- A Supabase project with anonymous sign-ins and CAPTCHA enabled; configure Google sign-in if you also want Google accounts
+- A Cloudflare Turnstile widget and its public site key
 - A Google Gemini API key
 
 ### Setup
@@ -67,9 +68,9 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
 
    On PowerShell, use `Copy-Item .env.example .env.local` instead of `cp`.
 
-2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
+2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
 3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `009`) to your Supabase database. Migrations `003` through `009` build on the earlier schema and Supabase Auth.
-4. Configure Google sign-in in Supabase and add `http://localhost:3000/auth/callback` to Supabase's allowed redirect URLs.
+4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow your local and deployed hostnames in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. If using Google sign-in, configure it in Supabase and add `http://localhost:3000/auth/callback` to Supabase's allowed redirect URLs.
 5. Start the app:
 
    ```sh
@@ -92,7 +93,11 @@ CI runs lint and tests on pushes to `main`/`master` and on pull requests.
 
 LearnAI sends learning goals, topic names, active tutor context, quiz content, and topic notes to Google Gemini to generate plans, explanations, summaries, and assessments. For some recall checkpoints, it may also send up to 50 recently studied topic names. Supabase stores your account's learning plan, topic progress, quiz plans and results, concept gaps, and one rolling note per topic. Full tutor conversations are not retained as chat history; submitted quiz answers are not stored as answers, though scores and feedback are.
 
+Guest access creates a Supabase anonymous user and uses Cloudflare Turnstile for bot protection. Guest data remains stored in Supabase, but access is tied to the browser session: signing out, clearing browser data, or switching devices prevents recovery. Guest accounts cannot currently be linked to Google. Review Cloudflare's data-handling terms as well.
+
 Do not submit sensitive or confidential information. Gemini responses, generated quizzes, and grading can be inaccurate or outdated; verify important claims with reliable, current sources. Review Google's and Supabase's data-handling terms before using the app with real learner data.
+
+App and MCP daily rate limits are tracked in memory per process and reset at UTC midnight or on restart; they are not shared across instances. Per-user limits alone do not prevent someone from creating multiple guest accounts.
 
 The optional Sentry integration sends reduced generic error events; performance tracing is disabled. Supabase database connections verify TLS certificates and hostnames. If your database requires a custom CA, set `SUPABASE_DB_CA_CERT` as described in [`.env.example`](.env.example)—do not disable certificate verification.
 

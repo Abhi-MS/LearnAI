@@ -36,7 +36,7 @@ LearnAI is not trying to maximize time in the app, enforce a lesson schedule, or
 
 ## What is implemented
 
-- Google sign-in and private, account-scoped learning data.
+- Google sign-in or CAPTCHA-protected guest access, with private, account-scoped learning data. Guest sessions cannot currently be recovered after signing out or clearing browser data.
 - Multiple personal explorations, each with generated categories and starter topics.
 - Custom categories and topics, with per-topic learning levels and completion.
 - Gemini-backed lessons and follow-up dialogue; diagrams are included when useful, and exploratory questions keep the discussion open.

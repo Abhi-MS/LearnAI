@@ -47,6 +47,12 @@ main {
   margin: 0 0 1.5rem;
 }
 
+.guest-notice {
+  max-width: 32rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .privacy-notice {
   max-width: 40rem;
   color: var(--muted);
@@ -103,11 +109,29 @@ main {
 }
 
 .auth-slot {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.6rem;
   min-height: 2.2rem;
   font-size: 0.9rem;
+}
+
+.guest-signout-confirmation {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(320px, calc(100vw - 2rem));
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(48, 39, 31, 0.14);
+}
+
+.guest-signout-confirmation p {
+  margin: 0 0 0.75rem;
 }
 
 .auth-name {
