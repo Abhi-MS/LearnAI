@@ -1,68 +1,82 @@
-# LearnAI Blueprint
+# LearnAI Product Blueprint
 
-## Concept
+## The idea
 
-LearnAI is an on-demand learning companion for people exploring any field, whether they need to understand something for a real project or want to learn at their own pace in spare moments. The tutor combines explanations, diagrams, Socratic questions, and examples relevant to the learner's situation. Assessments check understanding using evidence rather than impressions of conversational quality.
+People do not learn only by taking courses. They get curious, hit a question at work, change careers, or finally have a few minutes to understand something they have wondered about.
 
-## Design rules
+**LearnAI is a personal learning companion for those moments.** A learner chooses the subject and direction; an AI tutor helps make the ideas understandable, follows the learner's questions, and remembers enough to make returning feel natural. Learning can be brief or deep, planned or spontaneous.
 
-1. Progress is computed from logged evidence (quiz results, missed concepts), never from the LLM's opinion of the user.
-2. Quiz answers must be validated by a second-pass check before they can gate progress.
-3. Start with one Socratic tutor/orchestrator. Add the background assessor only after the core tutoring loop works; it can validate retrieval tasks and suggest quizzes, but does not independently define mastery or promote a learner.
-4. Expose learner state as tools so the tutor can call them explicitly: `get_progress`, `record_quiz_result`, and `generate_quiz`.
-5. Keep learning sessions flexible and interruptible, without a prescribed duration.
-6. Avoid claiming mastery from conversational quality; use measured outcomes from quiz performance and recurring concept gaps.
-7. AI explanations can be inaccurate or outdated, especially for new technologies. Encourage learners to verify important claims against reliable, current sources.
+The product should feel less like completing a course and more like having a thoughtful tutor available when curiosity strikes.
 
-## Roadmap / Milestone Plan
+## The promise
 
-The current app foundation includes sign-in, personal learning plans, topic selection and custom topics, and Gemini-backed tutoring. After the baseline database setup and Session 4 health check, Session 5 starts the next planned milestone.
+> Learn what matters to you, at your pace, and know what you have actually understood.
 
-### Milestone 3: Socratic Core & Structured AI Orchestration Engine
+LearnAI is not trying to maximize time in the app, enforce a lesson schedule, or infer mastery from confident conversation. It should make it easier to start learning, continue across interruptions, and see progress grounded in evidence.
 
-- [x] **Gemini JSON Schema Enforcement:** Use the Gemini SDK's `responseSchema` configuration for structured responses. Add `lib/types/socratic.ts` with strong types for `SocraticPayload`, including analogies, narrative text, Socratic questions, and graph arrays named `visualization_nodes` and `visualization_edges`.
-- [x] **UI Graphic Mapping Component:** Build an `app/` view that accepts the graph arrays and renders them as an interactive node graph using SVG coordinates or HTML/CSS blocks, rather than text blocks.
-- [x] **Socratic Conversation:** Start a topic with an explanation. Preserve conversation context during the active chat; adapt to the learner's demonstrated technical depth and use examples, analogies, and diagrams only when helpful. End each response with an invitation to explore and offer occasional learning checks after several follow-ups when useful for the subtopic.
-- [x] **Current Sources Plan:** For fast-changing subjects, later integrate a vetted grounding or retrieval provider that returns attributable source links and retrieval dates, prioritizes authoritative sources, and discloses any external data transfer. Verify citations before displaying them; when sources are unavailable, clearly communicate uncertainty instead of inventing citations. The current tutor does not search for or verify sources.
+## Product principles
 
-### Milestone 4: Cognitive Science Integration & Assessment Workers
+1. **Learner-led, not syllabus-led.** Give learners a useful starting path, then let them choose topics, ask their own questions, and change direction.
+2. **Flexible and interruptible.** Do not require a fixed session length, a streak, or a prescribed order.
+3. **Explain before testing.** Teach with clear explanations, relevant examples, and analogies. Use diagrams for concepts that benefit from a visual; do not make a diagram a requirement for every answer.
+4. **Keep the conversation inviting.** End explanations with an opening to explore further. Offer a knowledge check only when it is useful for the topic—not after every turn.
+5. **Resume without retaining everything.** Keep a concise rolling note and next step per topic, not a permanent transcript of the full conversation.
+6. **Make progress honest.** Conversation quality and AI-generated impressions are not evidence of mastery. Use validated assessment outcomes and retain concept gaps as actionable evidence.
+7. **Be clear about AI limits.** Generated explanations, questions, and grades can be wrong or out of date. Do not invent citations; learners should verify consequential claims.
+8. **Treat learner data carefully.** Explain what is sent to AI providers, store only the state needed for the learning loop, and keep account data private.
 
-- [x] **The Broken Diagram Test (Active Retrieval):** Implemented diagram-label assessment, but automatic label hiding is disabled because it can obscure explanations and produce unhelpful questions. Diagrams now remain fully visible.
-- [x] **Contextual Interleaving Hooks:** Record successfully studied topics and, when a learner's question is directly related, offer a recall checkpoint for a recently studied different topic, including across explorations.
+## The core learning loop
 
-### Milestone 5: Stateless Session Termination & Summary Sync
+1. A learner describes an interest, skill, or work goal.
+2. LearnAI creates a personal exploration with starter categories and topics.
+3. The learner picks a topic and learns through an adaptive explanation and open-ended dialogue.
+4. The learner can take an optional quiz to check understanding.
+5. Validated quiz evidence updates the topic's level; missed concepts are recorded.
+6. When the learner leaves, a short note captures what was covered and where to resume.
 
-- [x] **Memory Optimization Directive:** Do not store long, verbose multi-turn chat streams in Postgres/Supabase; persist only the minimal session state and summary needed to resume learning.
-- [x] **Session Teardown Hook:** On explicit chat closure or topic exit, call a cleanup API that asks Gemini to summarize the conversation stream into a small structured payload containing:
-  1. A short Markdown note describing the main breakthroughs.
-  2. Enum or numerical evaluation markers for conceptual depth. These markers are descriptive and must not independently gate progress.
-  3. A structural pointer/next-step string specifying where the dialogue should resume when the learner returns to the topic.
-- [x] **Database Sync:** Persist one rolling summary per topic in `topic_notes`. Browser page-exit saves are best-effort; explicit exits wait for the result and offer retry or leaving without saving.
-- [x] **Topic Notes and Resume:** Let learners view the saved summary for a topic. Discard the full conversation context after the chat is disposed, and provide the saved summary and resume pointer as context when the learner returns.
+## What is implemented
 
-### Milestone 6: Assessment & Evidence-Based Progress
+- Google sign-in and private, account-scoped learning data.
+- Multiple personal explorations, each with generated categories and starter topics.
+- Custom categories and topics, with per-topic learning levels and completion.
+- Gemini-backed lessons and follow-up dialogue; diagrams are included when useful, and exploratory questions keep the discussion open.
+- Occasional, contextual learning checks and cross-topic recall prompts.
+- One rolling topic note, with a summary and next step, used to resume learning.
+- Five-question mixed-format quizzes, with two grading checks before a result can affect progress.
+- Evidence-based progression across Beginner, Advanced, Pro, and Job Ready levels; a passing Job Ready result marks a topic complete.
+- A read-only stdio MCP server for listing tracks and topics.
 
-- [x] **Quiz Planning and Readiness:** Prepare a five-concept plan for the topic's current level, track discussed planned and additional concepts, and offer an optional suggestion when useful. This judgment is a prompt, not proof of mastery.
-- [x] **Learner-Led Conversation:** Use the planned concepts to guide the tutor when appropriate, but prioritize the learner's questions and follow their interests, even when they lead to more advanced material. Quiz suggestions are optional.
-- [x] **Validated Promotion:** Validate five mixed-format quiz answers with two independent checks. Promote the learner when the validated score is at least 80% correct; otherwise keep their current level. Record quiz results and recurring concept gaps as evidence.
-- [x] **Visible Progress:** Show the persisted topic level and mark completion after passing Job Ready. Badges and checkmarks are based on recorded assessments, not conversational quality or summary evaluation markers.
+See the [README](README.md) for setup, privacy, and operational details.
 
-### Milestone 7: Evaluation Set
+## Roadmap
 
-- [ ] Build a 30-question evaluation set and report accuracy in the README.
+### 1. Evaluate learning quality
 
-### Milestone 8: Deployment
+- [ ] Build a representative 30-question evaluation set.
+- [ ] Run it against the current tutor and publish the measured accuracy and evaluation method in the README.
+- [ ] Use evaluation results to identify weak areas in explanations, questions, quiz generation, and grading.
 
-- [ ] Deploy to Azure with IaC (Bicep or Terraform) and CI/CD.
+### 2. Improve source grounding
 
-### Milestone 9: Stretch Goals
+- [ ] Explore vetted retrieval for fast-changing subjects.
+- [ ] Prefer authoritative sources and include attribution and retrieval dates.
+- [ ] Verify sources before showing them; communicate uncertainty when trustworthy sources are unavailable.
+- [ ] Disclose any additional data shared with a retrieval provider.
 
-- [ ] Add more tracks.
+### 3. Deploy responsibly
 
-## Notes for the implementation plan
+- [ ] Deploy to Azure with infrastructure as code (Bicep or Terraform).
+- [ ] Add deployment CI/CD and document required configuration, migrations, and operational checks.
 
-- Keep the first delivery focused on the loop: track selection, topic, a single tutor, structured quiz generation, validation, and evidence-based progress.
-- Add the background assessor only after the Socratic tutoring loop is working; it validates retrieval challenges and can suggest quizzes, while validated quiz outcomes determine level progression.
-- Use explicit tool calls for learner-state access so the tutor remains auditable and the app remains truthful about what is actually measured.
-- Assessment operations currently use explicit server-side functions and user-initiated API actions, not Gemini function-calling tools; model-initiated learner-state tool access remains future work.
-- The baseline migrations define `sessions` and `concept_gaps` for legacy curated topics. Milestones 4–6 use separate tables for personal topics: `topic_study_history`, `topic_notes`, `topic_progress`, `topic_quiz_plans`, `topic_quiz_attempts`, `topic_quiz_results`, and `topic_concept_gaps`.
+### 4. Grow thoughtfully
+
+- [ ] Add more curated learning tracks if they make the starting experience more useful.
+- [ ] Evaluate improvements against learner outcomes and privacy requirements before expanding the product.
+
+## Assessment boundary
+
+The current app uses explicit server-side assessment operations. Model-initiated function calling and a separate background assessor are not implemented. Tutor suggestions can help a learner decide when to quiz, but only validated quiz results update topic levels or completion. Topic-note depth is descriptive and never gates progress.
+
+## Data model notes
+
+The first migrations define the original curated-track schema. The current personal-learning flow uses account-scoped tables for learning areas, categories, custom topics, study history, topic notes, progress, quiz plans, attempts, results, and concept gaps. Apply the migrations in order; see [`db/README.md`](db/README.md).

@@ -1,55 +1,91 @@
 # LearnAI
 
-LearnAI helps people explore a subject or industry with an AI tutor. On first sign-in, learners describe their goal and receive three personal categories, each with starter topics. They can add their own topics and categories, or delete a category and its topics after confirmation.
+<p align="center">
+  <strong>Learn what matters to you. Pick up where you left off.</strong>
+  <br />
+  A personal AI learning companion for curious minds, career pivots, and real-world questions.
+</p>
 
-## Progress log
+<p align="center">
+  <a href="https://github.com/Abhi-MS/LearnAI/actions/workflows/ci.yml"><img src="https://github.com/Abhi-MS/LearnAI/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+</p>
 
-- Session 1 — scaffolded the project blueprint, baseline README, and CI-ready Next.js + TypeScript foundation; marked M1 as complete.
-- Session 2 — fixed the React/Vitest JSX runtime issue by importing React in the test and revalidated the lint + test pipeline.
-- Session 3 — defined the core Postgres schema for tracks, users, topics, sessions, quiz results, and concept gaps, and added the migration baseline for M2.
-- Session 4 — added the Supabase environment template, shared DB client helper, and a health-check route that verifies the database is reachable before the app goes further into auth/profile work.
+LearnAI is built around a simple idea: **learning should follow your curiosity, not force you through someone else's course.** Tell it what you want to understand, explore the topics that matter to you, and have a tutor meet you at your level. Come back later and continue from a concise note of what you already covered.
 
-## Getting started
+There are no required lesson lengths or streaks. And a good-sounding conversation is not treated as proof that you learned something: progress comes from validated quiz results.
 
-1. Install dependencies with `npm install`.
-2. Run the app locally with `npm run dev`.
-3. Run lint and tests with `npm run lint` and `npm run test -- --run`.
+## The learning loop
 
-Apply the SQL migrations in `db/migrations` in order to the Supabase database.
-Migrations 003 through 005 are required for personal topics, onboarding, and multiple explorations and reference Supabase's `auth.users`. Migration 004 preserves existing custom topics and creates their categories; migration 005 moves an existing plan into its first exploration. Existing users who have not yet onboarded will be asked to set up a learning plan, and their existing topics will be included.
-Migration 007 is required for tutoring: it stores each user's last successful follow-up time per topic, across their explorations. A topic becomes eligible for recall after the tutor successfully answers a follow-up; opening a lesson alone does not count. Removing a topic also removes its study-history entry.
-Migration 008 adds one private rolling note per topic. It requires migration 007 and is required before using the tutor with topic notes.
-Migration 009 adds private topic progress, quiz plans, attempts, results, and concept gaps. It is required for tutoring and assessment; apply it before starting the updated app. Existing browser-only level selections are not assessment evidence and are not imported.
-Signed-in users can add private topics under an existing category or create a new
-category; these topics follow their account across devices. The app requires `GEMINI_API_KEY` for plan generation and tutoring. Generation is limited to five attempts per user and 100 total per day per server process; these limits reset on process restart.
+1. **Choose your direction.** Describe an industry, skill, or subject. LearnAI creates a starting plan, and you can change it, add topics, or keep separate explorations.
+2. **Follow the question.** Open a topic for an explanation, then ask what you actually want to know. The tutor uses examples and analogies, draws a diagram when it helps, and invites you to keep exploring.
+3. **Pick up where you left off.** When you finish, LearnAI can save a short topic note with the key ideas and a suggested next step—not your full conversation.
+4. **Check what stuck.** Take an optional five-question quiz. Two independent grading checks validate the result; a passing score moves your topic forward.
 
-Use the **Currently exploring** dropdown to switch between private learning areas or add another. Each area has its own generated categories and topics; switching is saved to the account.
+## What makes it different
 
-The tutor introduces a topic with an explanation, using examples, analogies, and interactive diagrams when helpful. Each response ends with a question inviting further exploration, which learners can ignore or answer as they wish. Diagrams are intended for complex concepts or when a longer discussion benefits from a visual; select their nodes to explore them. Separately, the tutor may offer a concise learning-check question after at least three completed follow-ups since the last checkpoint, when it considers a question helpful for the current subtopic. This judgment is AI-generated and may be imperfect. Follow-up requests include the active conversation as context; it is discarded when the topic closes and is not saved as chat history. Conversations exceeding 60,000 characters of structured history must be restarted.
+- **Your path, not a prescribed syllabus.** Start with an AI-generated plan, then add your own topics and follow your interests.
+- **Flexible by design.** Explore in short sessions or go deeper; there is no timer or required sequence.
+- **A tutor, not a talking search box.** Learn through explanations and dialogue, with diagrams used selectively and learning checks offered when useful.
+- **Progress with evidence.** Topic levels are based on validated quiz outcomes, not time spent, chat activity, or AI guesses about mastery.
+- **Continuity without chat hoarding.** A rolling note helps you resume while the full tutor conversation is discarded when the session ends.
 
-Diagrams show all nodes and connections rather than automatically hiding labels for a retrieval exercise. Once a checkpoint is eligible, Gemini may check up to 50 of the most recently studied different topic names for a direct, meaningful relationship to the learner's question. A related topic may prompt one recall checkpoint per session when useful; unrelated or ambiguous questions should not. This relevance judgment uses the existing tutor request and can be imperfect. Checkpoints do not change topic levels. Tutor requests share daily limits (by default, 30 per user and 100 total per server process, resetting at UTC midnight or process restart); Gemini's own usage limits are separate.
+## Project status
 
-Opening a topic prepares a five-concept quiz plan for its current level. The tutor tracks discussed concepts and may suggest an optional quiz after at least three follow-ups and three planned concepts have been discussed; a suggestion is not proof of mastery. Learners can defer, continue chatting, or start a quiz themselves. The quiz panel can be collapsed and reopened without losing the current answers or result while the topic stays open. Each quiz has three multiple-choice and two short-answer questions. Two independent model checks validate the answers; if they disagree or flag an invalid question, no result is recorded and the learner can retry or start a new quiz. A validated score of at least 4/5 promotes the topic one level; passing at Job Ready marks it complete. Failed attempts retain the level and record missed concepts. Levels and completion are stored per account and come only from recorded quiz results, not conversation or notes. AI-generated questions and grading can still be wrong.
+The core learning loop is implemented: sign-in, personal learning plans, topic management, tutoring, resumable topic notes, quizzes, and evidence-based progress. Evaluation and deployment are still planned. See the [product blueprint](BLUEPRINT.md) for the principles behind the project and what is next.
 
-Planning a new quiz, generating questions, and each of the two grading checks use separate Gemini requests and share the tutor's daily limits. An unfinished quiz can be abandoned by continuing the conversation or leaving the topic; its entered answers are not restored on return.
+## Run locally
 
-After at least one successful follow-up, closing the tutor, switching topics or explorations, or signing out generates an updated note using an additional Gemini request, subject to the same tutor limits. If saving fails, retry or explicitly leave without saving. Topics with saved notes have a notes icon to preview them without opening the tutor. Reopening the topic shows its note and uses it to resume; the depth marker describes the material discussed and does not change the learner's level. Refreshing or closing the browser attempts a best-effort save, but it may not finish; explicitly close the tutor to reliably wait for the result. Deleting a topic or its category also deletes the note.
+### You will need
 
-## Privacy and database security
+- Node.js 20 or later
+- A Supabase project with Google sign-in configured
+- A Google Gemini API key
 
-Learning goals, topic names, active tutor conversations, quiz plans, questions, reference answers, submitted quiz answers, and saved topic notes are sent to Google Gemini. For recall relevance, up to 50 recently studied topic names may be sent with eligible follow-up requests until a recall checkpoint is shown. Study history stores topic IDs and last-studied times; topic notes store an AI-generated summary, descriptive depth, and next step. Quiz plans and generated questions, including their answer keys, are stored privately; results store scores, AI feedback, and missed concepts, but not the submitted answers themselves. Feedback and summaries may still include details from the learner's input. Full conversations are not saved. Do not enter sensitive or confidential information. Review the Google project's data-handling terms and settings before sharing the app.
+### Setup
 
-AI tutor responses can be inaccurate or outdated, especially for new technologies. Verify important details against reliable, current sources.
+1. Install packages and create your local environment file:
 
-Supabase database connections require certificate and hostname verification. Node's trusted certificate authorities are used by default. If your Supabase connection requires a separate CA, download it from Supabase Dashboard > Database Settings > SSL Configuration, and set `SUPABASE_DB_CA_CERT` to its PEM contents (newlines or `\n`) in each deployment environment. Do not disable certificate verification. Check `/api/health/db` after deployment.
+   ```sh
+   npm install
+   cp .env.example .env.local
+   ```
 
-Sentry error events are reduced to a generic error without the original message, request, user, breadcrumbs, or stack trace. Performance tracing is disabled. This limits diagnostics and does not change Sentry or Google account settings or remove historical data already sent to them.
+   On PowerShell, use `Copy-Item .env.example .env.local` instead of `cp`.
 
-## Roadmap
+2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
+3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `009`) to your Supabase database. Migrations `003` through `009` build on the earlier schema and Supabase Auth.
+4. Configure Google sign-in in Supabase and add `http://localhost:3000/auth/callback` to Supabase's allowed redirect URLs.
+5. Start the app:
 
-See [BLUEPRINT.md](BLUEPRINT.md) for the full milestone plan and design rules.
+   ```sh
+   npm run dev
+   ```
 
-## MCP server
+   Open [http://localhost:3000](http://localhost:3000). Check the database connection at `/api/health/db`.
 
+### Checks
 
-pm run mcp starts a read-only stdio MCP server (tools: `list_tracks`, `list_topics`) backed by the same Postgres data as the app. Tool calls are capped per day via `MCP_DAILY_CALL_LIMIT` (default 500), and `list_topics` returns at most 25 topics per call. Example client config: `{ \"command\": \"npx\", \"args\": [\"tsx\", \"mcp/index.ts\"], \"cwd\": \"<repo path>\" }`.
+```sh
+npm run lint
+npm run test -- --run
+npm run build
+```
+
+CI runs lint and tests on pushes to `main`/`master` and on pull requests.
+
+## Privacy and AI limitations
+
+LearnAI sends learning goals, topic names, active tutor context, quiz content, and topic notes to Google Gemini to generate plans, explanations, summaries, and assessments. For some recall checkpoints, it may also send up to 50 recently studied topic names. Supabase stores your account's learning plan, topic progress, quiz plans and results, concept gaps, and one rolling note per topic. Full tutor conversations are not retained as chat history; submitted quiz answers are not stored as answers, though scores and feedback are.
+
+Do not submit sensitive or confidential information. Gemini responses, generated quizzes, and grading can be inaccurate or outdated; verify important claims with reliable, current sources. Review Google's and Supabase's data-handling terms before using the app with real learner data.
+
+The optional Sentry integration sends reduced generic error events; performance tracing is disabled. Supabase database connections verify TLS certificates and hostnames. If your database requires a custom CA, set `SUPABASE_DB_CA_CERT` as described in [`.env.example`](.env.example)—do not disable certificate verification.
+
+## Read-only MCP server
+
+Run `npm run mcp` to start the stdio MCP server. It exposes `list_tracks` and `list_topics` against the app's Postgres database; calls are rate-limited with `MCP_DAILY_CALL_LIMIT` (default `500`), and each topic listing is capped at 25 results.
+
+## Documentation
+
+- [Product blueprint](BLUEPRINT.md) — product concept, principles, shipped capabilities, and roadmap.
+- [Database notes](db/README.md) — schema overview and migration guidance.
