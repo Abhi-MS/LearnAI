@@ -109,3 +109,11 @@ it("keeps a failed question in context when the learner asks to retry", async ()
   ]);
   await waitFor(() => expect(screen.getAllByText("Lesson")).toHaveLength(2));
 });
+
+it("shows the specific tutor capacity message", async () => {
+  stubTutorFetch(vi.fn().mockResolvedValue({
+    ok: false, status: 429, json: async () => ({ error: "Tutor is at capacity today. Try again tomorrow." }),
+  }));
+  render(<TutorPanel topicId="c0a80101-0000-4000-8000-000000000001" topic="Concurrency" level="Beginner" onClose={() => {}} />);
+  expect(await screen.findByText("Tutor is at capacity today. Try again tomorrow.")).toBeInTheDocument();
+});

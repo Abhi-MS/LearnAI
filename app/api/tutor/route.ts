@@ -49,6 +49,7 @@ export async function POST(request: Request) {
   );
   const canRecall = mode === 'chat' && !alreadyRecalled && canAskCheckpoint(history.data);
 
+  let stage: 'loading_topic' | 'generating_response' | 'saving_history' = 'loading_topic';
   try {
     const topicResult = await getPool().query<{
       title: string; previous_topics: string[]; saved_note: string | null;
@@ -82,12 +83,14 @@ export async function POST(request: Request) {
       note: topic.saved_note, depth: topic.saved_depth, nextStep: topic.saved_next_step, revision: topic.saved_revision,
     });
     const resumeNote = savedNote && { note: savedNote.note, depth: savedNote.depth, nextStep: savedNote.nextStep };
+    stage = 'generating_response';
     const { payload, recallTopic } = await askTutor({
       userId: auth.user.id, topic: topic.title, level: levelSchema.parse(topic.level), question, mode, history: history.data,
       previousTopics: topic.previous_topics, resumeNote,
       quizConcepts: topic.quiz_concepts == null ? undefined : conceptsSchema.parse(topic.quiz_concepts),
     });
     if (mode === 'chat') {
+      stage = 'saving_history';
       const saved = await getPool().query(
         `INSERT INTO topic_study_history (user_id, topic_id, last_studied_at)
          SELECT user_id, id, NOW() FROM custom_topics WHERE user_id = $1 AND id = $2
@@ -107,6 +110,13 @@ export async function POST(request: Request) {
     if (error instanceof TutorLimitError) {
       return NextResponse.json({ error: error.message }, { status: 429 });
     }
+    const category = stage === 'generating_response' && (error instanceof z.ZodError || error instanceof SyntaxError)
+      ? 'invalid_model_output'
+      : 'request_failed';
+    const status = stage === 'generating_response' && typeof error === 'object' && error !== null && 'status' in error
+      && typeof error.status === 'number' && Number.isInteger(error.status) && error.status >= 100 && error.status <= 599
+      ? error.status : undefined;
+    console.error('[tutor] Request failed', { stage, category, ...(status ? { providerStatus: status } : {}) });
     Sentry.captureException(error);
     return NextResponse.json({ error: 'Tutor unavailable' }, { status: 503 });
   }

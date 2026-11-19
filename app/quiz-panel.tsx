@@ -119,7 +119,6 @@ export default function QuizPanel({ topicId, level, completed, coverage, onProgr
             <summary>Quiz plan · {plan.level}</summary>
             <ul>{plan.concepts.map((concept, index) => <li key={concept}>{concept}{coverage?.covered.includes(index) ? " — discussed" : ""}</li>)}</ul>
             {coverage && coverage.additional.length > 0 && <p>Also discussed: {coverage.additional.join(", ")}</p>}
-            <p>Discussion is not evidence of mastery. A quiz is always optional.</p>
           </details>
           {coverage?.ready && !dismissed && !result && <p role="status">You may be ready for a quiz. Continue chatting or try it when you like. <button type="button" className="link-button" onClick={() => setDismissed(true)}>Not now</button></p>}
           <button type="button" className="chip-button" disabled={busy} onClick={start}>{busy ? "Preparing quiz…" : "Take quiz"}</button>

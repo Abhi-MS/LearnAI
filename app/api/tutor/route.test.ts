@@ -126,6 +126,7 @@ describe('POST /api/tutor', () => {
   });
 
   it('rejects malformed graph output rather than returning an invalid diagram', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     generateContent.mockResolvedValueOnce({
       text: JSON.stringify({ ...payload, visualization_edges: [{ source: 'index', target: 'missing', label: 'points to' }] }),
     });
@@ -136,6 +137,21 @@ describe('POST /api/tutor', () => {
       body: JSON.stringify({ topicId, question: 'Explain it' }),
     }));
     expect(response.status).toBe(503);
+    expect(log).toHaveBeenCalledWith('[tutor] Request failed', { stage: 'generating_response', category: 'invalid_model_output' });
+    log.mockRestore();
+  });
+
+  it('logs provider status without exposing the error message', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    generateContent.mockRejectedValueOnce(Object.assign(new Error('private question'), { status: 429 }));
+    const { POST } = await import('./route');
+    const response = await POST(new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, question: 'Explain it' }),
+    }));
+    expect(response.status).toBe(503);
+    expect(log).toHaveBeenCalledWith('[tutor] Request failed', { stage: 'generating_response', category: 'request_failed', providerStatus: 429 });
+    expect(JSON.stringify(log.mock.calls)).not.toContain('private question');
+    log.mockRestore();
   });
 
   it('rejects a response without a conversation question, but accepts older history without one', async () => {

@@ -17,6 +17,22 @@ const failed = (error: string) => ({ ok: false, json: async () => ({ error }) })
 afterEach(() => vi.unstubAllGlobals());
 
 describe("learning plan", () => {
+  it("uses category suggestions and falls back when missing or already added", async () => {
+    const categories = [
+      { ...category, suggestedTopic: "Portraits" },
+      { id: "2", name: "Theory", suggestedTopic: "Rhythm", topics: [{ ...category.topics[0], title: "rhythm" }] },
+    ];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(ok({ ...plan, areas: [{ ...area, categories }] })));
+    render(<TopicsList />);
+    const topic = await screen.findByLabelText("Topic");
+    expect(topic).toHaveAttribute("placeholder", "e.g. Portraits");
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "existing:Theory" } });
+    expect(topic).toHaveAttribute("placeholder", "Enter a topic you want to explore");
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "new" } });
+    expect(topic).toHaveAttribute("placeholder", "Enter a topic you want to explore");
+    expect(screen.getByLabelText("New category")).toHaveAttribute("placeholder", "Enter a category name");
+  });
+
   it("shows stored assessment progress and completion", async () => {
     const completed = { ...category, topics: [{ ...category.topics[0], level: "Job Ready", completed: true }] };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(ok({ ...plan, areas: [{ ...area, categories: [completed] }] })));

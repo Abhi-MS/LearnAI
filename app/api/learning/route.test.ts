@@ -54,14 +54,15 @@ describe('/api/learning', () => {
     clientQuery.mockResolvedValue({ rows: [{ id: 'area-1' }] });
     ensureCategory.mockImplementation(async (_client, _id, _areaId, name) => ({ id: name, name }));
     generate.mockResolvedValue([
-      { name: 'A', topics: ['A1', 'A2'] },
+      { name: 'A', topics: ['A1', 'A2'], suggestedTopic: 'A3' },
       { name: 'B', topics: ['B1', 'B2'] },
       { name: 'C', topics: ['C1', 'C2'] },
     ]);
     expect((await POST(request(' Music '))).status).toBe(201);
     expect(generate).toHaveBeenCalledWith('Music');
     expect(ensureCategory).toHaveBeenCalledTimes(3);
-    expect(clientQuery).toHaveBeenCalledTimes(9);
+    expect(clientQuery).toHaveBeenCalledTimes(10);
+    expect(clientQuery).toHaveBeenCalledWith(expect.stringContaining('SET suggested_topic'), ['A3', 'A', 'user-1']);
     expect(clientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO custom_topics'), ['user-1', 'A', 'A', 'A1']);
     expect(clientQuery.mock.calls.some(([sql]) => sql.includes('DELETE'))).toBe(false);
   });

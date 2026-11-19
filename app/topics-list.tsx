@@ -8,7 +8,7 @@ import { LEVELS, type Level } from "../lib/levels";
 import { MAX_CATEGORY_LENGTH, MAX_LEARNING_GOAL_LENGTH, MAX_TOPIC_LENGTH } from "../lib/topic-limits";
 
 type Topic = { id: string; title: string; hasNote: boolean; level: Level; completed: boolean };
-type Category = { id: string; name: string; topics: Topic[] };
+type Category = { id: string; name: string; suggestedTopic?: string | null; topics: Topic[] };
 type Area = { id: string; name: string; categories: Category[] };
 type Plan = { activeAreaId: string | null; areas: Area[] };
 type SelectedTopic = Topic & { categoryId: string };
@@ -227,6 +227,13 @@ export default function TopicsList() {
   }
 
   const activeArea = plan?.areas.find((area) => area.id === plan.activeAreaId);
+  const selectedCategory = activeArea?.categories.find((item) =>
+    category ? category === `existing:${item.name}` : item.id === activeArea.categories[0]?.id,
+  );
+  const suggestedTopic = selectedCategory?.suggestedTopic;
+  const topicPlaceholder = suggestedTopic && !selectedCategory.topics.some((topic) =>
+    topic.title.trim().toLowerCase() === suggestedTopic.trim().toLowerCase(),
+  ) ? `e.g. ${suggestedTopic}` : "Enter a topic you want to explore";
   const navigation = (
     <div className="topbar">
       {plan && activeArea && (
@@ -279,7 +286,6 @@ export default function TopicsList() {
         <span className="badge">Learning tailored to you</span>
         <h1>What would you like to learn?</h1>
         <p className="lead">Tell us your industry or a subject you are curious about. We&apos;ll create three categories with starter topics for you.</p>
-        <p className="privacy-notice">Your learning goal is sent to Google Gemini. Don&apos;t include sensitive or confidential information.</p>
         <form className="custom-topic-form onboarding-form" onSubmit={generatePlan}>
           <label htmlFor="learning-goal">Your industry or learning goal</label>
           <input id="learning-goal" placeholder="e.g. photography, healthcare, or personal finance" value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={MAX_LEARNING_GOAL_LENGTH} disabled={generating} required />
@@ -308,7 +314,7 @@ export default function TopicsList() {
             <p className="custom-topic-description">Add a topic just for you.</p>
             <form className="custom-topic-form" onSubmit={addTopic}>
               <label htmlFor="custom-topic-title">Topic</label>
-              <input id="custom-topic-title" placeholder="e.g. Photography basics" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={MAX_TOPIC_LENGTH} disabled={saving || switching} required />
+              <input id="custom-topic-title" placeholder={topicPlaceholder} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={MAX_TOPIC_LENGTH} disabled={saving || switching} required />
               <label htmlFor="custom-topic-category">Category</label>
               <select id="custom-topic-category" value={category || (activeArea.categories[0] ? `existing:${activeArea.categories[0].name}` : "new")} onChange={(event) => setCategory(event.target.value)} disabled={saving || switching}>
                 {activeArea.categories.map((item) => <option key={item.id} value={`existing:${item.name}`}>{item.name}</option>)}
@@ -317,7 +323,7 @@ export default function TopicsList() {
               {(category === "new" || (!category && activeArea.categories.length === 0)) && (
                 <>
                   <label htmlFor="custom-topic-new-category">New category</label>
-                  <input id="custom-topic-new-category" placeholder="e.g. Photography" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={MAX_CATEGORY_LENGTH} disabled={saving || switching} required />
+                  <input id="custom-topic-new-category" placeholder="Enter a category name" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={MAX_CATEGORY_LENGTH} disabled={saving || switching} required />
                 </>
               )}
               {formError && <p className="status status-error" role="alert">{formError}</p>}

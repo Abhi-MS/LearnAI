@@ -31,11 +31,7 @@ async function callTutor(body: TutorRequest) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(
-      res.status === 429
-        ? "Daily tutor limit reached. Try again tomorrow."
-        : data.error ?? "Tutor unavailable right now.",
-    );
+    throw new Error(typeof data.error === "string" ? data.error : "Tutor unavailable right now.");
   }
   const parsed = tutorResponseSchema.safeParse(data.payload);
   if (!parsed.success) throw new Error("The tutor response could not be displayed. Please try again.");

@@ -25,7 +25,7 @@ export async function GET() {
         COALESCE((
           SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'categories', COALESCE((
             SELECT json_agg(json_build_object(
-              'id', c.id, 'name', c.name,
+              'id', c.id, 'name', c.name, 'suggestedTopic', c.suggested_topic,
               'topics', COALESCE((
                 SELECT json_agg(json_build_object(
                   'id', t.id, 'title', t.title,
@@ -83,6 +83,12 @@ export async function POST(request: Request) {
       await client.query('UPDATE learning_categories SET area_id = $1 WHERE user_id = $2 AND area_id IS NULL', [areaId, user.id]);
       for (const category of categories) {
         const saved = await ensureCategory(client, user.id, areaId, category.name);
+        if (category.suggestedTopic) {
+          await client.query(
+            'UPDATE learning_categories SET suggested_topic = $1 WHERE id = $2 AND user_id = $3',
+            [category.suggestedTopic, saved.id, user.id],
+          );
+        }
         for (const topic of category.topics) {
           await client.query(
             `INSERT INTO custom_topics (user_id, category_id, category, title) VALUES ($1, $2, $3, $4)
