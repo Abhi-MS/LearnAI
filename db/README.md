@@ -4,7 +4,7 @@ LearnAI uses Supabase Auth and Postgres. The migrations create the app schema, m
 
 ## Apply migrations
 
-For a new database, apply the SQL files in [`migrations`](migrations) in numeric order, from `001` through `010`. For a database that already has some migrations, apply only the unapplied migrations, in order. The migrations build on Supabase's `auth.users` table. Apply `010` before deploying the version that reads suggested topics.
+For a new database, apply the SQL files in [`migrations`](migrations) in numeric order, from `001` through `011`. For a database that already has some migrations, apply only the unapplied migrations, in order. The migrations build on Supabase's `auth.users` table. Apply `010` before deploying the version that reads suggested topics, and `011` before deploying guest activity tracking.
 
 | Migration | Purpose |
 | --- | --- |
@@ -18,6 +18,7 @@ For a new database, apply the SQL files in [`migrations`](migrations) in numeric
 | `008` | Store one private rolling note per topic. |
 | `009` | Add topic levels, quiz plans and attempts, validated results, and concept gaps. |
 | `010` | Store an optional generated topic suggestion for each category. Existing categories retain a generic prompt. |
+| `011` | Track guest activity for inactivity cleanup. Existing guests are marked active at migration time. |
 
 Migrations `004` and `005` preserve existing learner data while moving it into the newer category and exploration model. Review each migration before applying it to a database with existing data.
 

@@ -4,11 +4,12 @@ import { createSupabaseServerClient } from "../../../lib/supabase-server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const linking = searchParams.get("link") === "1";
 
   if (code) {
     const { error } = await (await createSupabaseServerClient()).auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}/`);
   }
 
-  return NextResponse.redirect(`${origin}/?auth=error`);
+  return NextResponse.redirect(`${origin}/?auth=${linking ? "link_error" : "error"}`);
 }

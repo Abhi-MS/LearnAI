@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "../lib/supabase-browser";
 
-export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (signOut: () => void) => void }) {
+export default function AuthButton({ onLeaveRequest }: { onLeaveRequest?: (action: () => void) => void }) {
   const [supabase] = useState(() => createSupabaseBrowserClient());
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const [confirmGuestExit, setConfirmGuestExit] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [signOutError, setSignOutError] = useState("");
 
   useEffect(() => {
@@ -22,6 +23,15 @@ export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (s
     );
     return () => data.subscription.unsubscribe();
   }, [supabase]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("auth") === "link_error") {
+      setSignOutError("Could not link Google. It may already be linked to another LearnAI account. Your guest progress is unchanged.");
+      url.searchParams.delete("auth");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, []);
 
   if (!ready) return <div className="auth-slot" />;
 
@@ -51,6 +61,13 @@ export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (s
       setSigningOut(true);
       setSignOutError("");
       try {
+        if (user?.is_anonymous) {
+          const response = await fetch("/api/guest", { method: "DELETE" });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Could not delete guest progress. Please try again.");
+          }
+        }
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       } catch (error) {
@@ -59,8 +76,31 @@ export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (s
         setSigningOut(false);
       }
     };
-    if (onSignOutRequest) onSignOutRequest(() => { void signOut(); });
+    if (onLeaveRequest) onLeaveRequest(() => { void signOut(); });
     else void signOut();
+  }
+
+  function requestLink() {
+    const link = async () => {
+      setLinking(true);
+      setSignOutError("");
+      try {
+        const activity = await fetch("/api/guest", { method: "POST" });
+        if (!activity.ok) throw new Error("Could not keep your guest session active. Please try again.");
+        const { error } = await supabase.auth.linkIdentity({
+          provider: "google",
+          options: { redirectTo: `${window.location.origin}/auth/callback?link=1` },
+        });
+        if (error) throw error;
+      } catch (error) {
+        setSignOutError(error instanceof Error && error.message === "Could not keep your guest session active. Please try again."
+          ? error.message
+          : "Could not link Google. Try again; Google accounts already used with LearnAI cannot be linked. Your guest progress is unchanged.");
+        setLinking(false);
+      }
+    };
+    if (onLeaveRequest) onLeaveRequest(() => { void link(); });
+    else void link();
   }
 
   return (
@@ -70,7 +110,8 @@ export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (s
         <img className="avatar" src={user.user_metadata.avatar_url} alt="" referrerPolicy="no-referrer" />
       )}
       <span className="auth-name">{name}</span>
-      <button type="button" className="chip-button" disabled={signingOut} onClick={() => {
+      {user.is_anonymous && <button type="button" className="chip-button" disabled={linking || signingOut} onClick={requestLink}>{linking ? "Connecting..." : "Keep progress"}</button>}
+      <button type="button" className="chip-button" disabled={signingOut || linking} onClick={() => {
         if (user.is_anonymous) setConfirmGuestExit(true);
         else requestSignOut();
       }}>
@@ -78,7 +119,7 @@ export default function AuthButton({ onSignOutRequest }: { onSignOutRequest?: (s
       </button>
       {confirmGuestExit && (
         <div className="guest-signout-confirmation" role="group" aria-label="Confirm guest sign out">
-          <p>Signing out permanently loses access to this guest&apos;s progress.</p>
+          <p>Signing out permanently deletes this guest&apos;s progress. Link Google first to keep it.</p>
           <button type="button" className="chip-button" onClick={() => setConfirmGuestExit(false)}>Cancel</button>{" "}
           <button type="button" className="primary" onClick={requestSignOut}>Sign out anyway</button>
         </div>

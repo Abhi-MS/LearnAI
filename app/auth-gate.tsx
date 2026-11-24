@@ -7,6 +7,8 @@ import { createSupabaseBrowserClient } from "../lib/supabase-browser";
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => createSupabaseBrowserClient());
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [guest, setGuest] = useState(false);
+  const [activityError, setActivityError] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaError, setCaptchaError] = useState("");
   const [authError, setAuthError] = useState("");
@@ -16,12 +18,39 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) =>
-      setSignedIn(!!session?.user),
-    );
+    supabase.auth.getUser().then(({ data }) => {
+      setSignedIn(!!data.user);
+      setGuest(!!data.user?.is_anonymous);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session?.user);
+      setGuest(!!session?.user?.is_anonymous);
+    });
     return () => data.subscription.unsubscribe();
   }, [supabase]);
+
+  useEffect(() => {
+    if (!guest) return;
+    let active = true;
+    async function recordActivity() {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const response = await fetch("/api/guest", { method: "POST" });
+        if (!response.ok) throw new Error("Could not update guest activity.");
+        if (active) setActivityError("");
+      } catch {
+        if (active) setActivityError("Could not update guest activity. Refresh or try again later to keep this guest session active.");
+      }
+    }
+    void recordActivity();
+    const interval = window.setInterval(recordActivity, 60 * 60 * 1000);
+    document.addEventListener("visibilitychange", recordActivity);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", recordActivity);
+    };
+  }, [guest]);
 
   async function signInAsGuest() {
     if (!captchaToken || signingInRef.current) return;
@@ -72,7 +101,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           generate responses, summaries, or assessments. Topic summaries are saved to your account. Please don&apos;t enter sensitive or confidential information.
         </p>
         <p className="guest-notice">
-          Guest progress is available only in this browser. You cannot recover it after signing out or clearing browser data.
+          Guest progress is tied to this browser. Sign out deletes it; inactive guest accounts are deleted after 30 days. Link Google to keep it.
         </p>
         {siteKey ? (
           <>
@@ -108,5 +137,5 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return <>{activityError && <p className="status status-error" role="alert">{activityError}</p>}{children}</>;
 }

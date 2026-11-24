@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   signInAnonymously: vi.fn(),
   signInWithOAuth: vi.fn(),
+  linkIdentity: vi.fn(),
   signOut: vi.fn(),
   reset: vi.fn(),
 }));
@@ -38,11 +39,14 @@ beforeEach(() => {
   mocks.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
   mocks.signInAnonymously.mockResolvedValue({ data: { session: {} }, error: null });
   mocks.signOut.mockResolvedValue({ error: null });
+  mocks.linkIdentity.mockResolvedValue({ error: null });
 });
 
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
 });
 
 describe("guest authentication", () => {
@@ -85,19 +89,66 @@ describe("guest authentication", () => {
 
   it("warns before signing out a guest and preserves the leave hook", async () => {
     mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
-    const onSignOutRequest = vi.fn();
-    render(<AuthButton onSignOutRequest={onSignOutRequest} />);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const onLeaveRequest = vi.fn();
+    render(<AuthButton onLeaveRequest={onLeaveRequest} />);
     expect(await screen.findByText("Guest")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-    expect(screen.getByRole("group", { name: "Confirm guest sign out" })).toHaveTextContent("permanently loses access");
-    expect(onSignOutRequest).not.toHaveBeenCalled();
+    expect(screen.getByRole("group", { name: "Confirm guest sign out" })).toHaveTextContent("permanently deletes");
+    expect(onLeaveRequest).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(mocks.signOut).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     fireEvent.click(screen.getByRole("button", { name: "Sign out anyway" }));
-    expect(onSignOutRequest).toHaveBeenCalledOnce();
+    expect(onLeaveRequest).toHaveBeenCalledOnce();
     expect(mocks.signOut).not.toHaveBeenCalled();
-    await act(async () => { onSignOutRequest.mock.calls[0][0](); });
+    await act(async () => { onLeaveRequest.mock.calls[0][0](); });
+    expect(fetchMock).toHaveBeenCalledWith("/api/guest", { method: "DELETE" });
     expect(mocks.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the session when guest deletion fails", async () => {
+    mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: "Could not delete guest progress." }) }));
+    render(<AuthButton />);
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign out anyway" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not delete guest progress.");
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("saves the active session before linking Google to the guest", async () => {
+    mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    const onLeaveRequest = vi.fn();
+    render(<AuthButton onLeaveRequest={onLeaveRequest} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Keep progress" }));
+    expect(mocks.linkIdentity).not.toHaveBeenCalled();
+    await act(async () => { onLeaveRequest.mock.calls[0][0](); });
+    expect(mocks.linkIdentity).toHaveBeenCalledWith({
+      provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?link=1` },
+    });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("reports failed linking without signing out or deleting the guest", async () => {
+    mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
+    mocks.linkIdentity.mockResolvedValueOnce({ error: new Error("identity_already_exists") });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AuthButton />);
+    fireEvent.click(await screen.findByRole("button", { name: "Keep progress" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your guest progress is unchanged");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/guest", { method: "POST" });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("reports link callback failure to the guest", async () => {
+    window.history.replaceState(null, "", "/?auth=link_error");
+    mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
+    render(<AuthButton />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your guest progress is unchanged");
   });
 });

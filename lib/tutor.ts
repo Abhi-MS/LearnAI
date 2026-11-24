@@ -116,7 +116,10 @@ export async function askTutor(input: {
 
   consumeTutorRequest(input.userId);
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: { retryOptions: { attempts: 3, httpStatusCodes: [503] } },
+  });
   const previousTopics = isLesson ? [] : input.previousTopics ?? [];
   const checkpointAllowed = !isLesson && canAskCheckpoint(input.history ?? []);
   const contents = JSON.stringify({

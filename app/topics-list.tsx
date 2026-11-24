@@ -268,7 +268,7 @@ export default function TopicsList() {
           {switchError && <p className="status status-error" role="alert">{switchError}</p>}
         </div>
       )}
-      <AuthButton onSignOutRequest={(signOut) => { void requestLeave(signOut); }} />
+      <AuthButton onLeaveRequest={(action) => { void requestLeave(action); }} />
     </div>
   );
 

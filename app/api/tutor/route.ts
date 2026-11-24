@@ -118,6 +118,9 @@ export async function POST(request: Request) {
       ? error.status : undefined;
     console.error('[tutor] Request failed', { stage, category, ...(status ? { providerStatus: status } : {}) });
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Tutor unavailable' }, { status: 503 });
+    const message = status === 503
+      ? 'The AI provider is temporarily unavailable. Please try again in a moment.'
+      : 'Tutor unavailable';
+    return NextResponse.json({ error: message }, { status: 503 });
   }
 }

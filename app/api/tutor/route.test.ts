@@ -154,6 +154,18 @@ describe('POST /api/tutor', () => {
     log.mockRestore();
   });
 
+  it('explains a temporary provider outage without exposing provider details', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    generateContent.mockRejectedValueOnce(Object.assign(new Error('private provider details'), { status: 503 }));
+    const { POST } = await import('./route');
+    const response = await POST(new Request('http://localhost/api/tutor', {
+      method: 'POST', body: JSON.stringify({ topicId, question: 'Explain it' }),
+    }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'The AI provider is temporarily unavailable. Please try again in a moment.' });
+    log.mockRestore();
+  });
+
   it('rejects a response without a conversation question, but accepts older history without one', async () => {
     const { conversation_question: _question, ...legacyPayload } = payload;
     const { POST } = await import('./route');

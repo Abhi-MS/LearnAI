@@ -69,7 +69,7 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
    On PowerShell, use `Copy-Item .env.example .env.local` instead of `cp`.
 
 2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
-3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `010`) to your Supabase database. Migrations `003` through `010` build on the earlier schema and Supabase Auth.
+3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `011`) to your Supabase database. Migrations `003` through `011` build on the earlier schema and Supabase Auth. Apply only migrations that have not already been applied.
 4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow your local and deployed hostnames in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. If using Google sign-in, configure it in Supabase and add `http://localhost:3000/auth/callback` to Supabase's allowed redirect URLs.
 5. Start the app:
 

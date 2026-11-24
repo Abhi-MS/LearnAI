@@ -113,8 +113,11 @@ main {
   position: relative;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.6rem;
   margin-left: auto;
+  max-width: 100%;
   min-height: 2.2rem;
   font-size: 0.9rem;
 }
