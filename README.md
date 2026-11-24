@@ -70,7 +70,7 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
 
 2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
 3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `011`) to your Supabase database. Migrations `003` through `011` build on the earlier schema and Supabase Auth. Apply only migrations that have not already been applied.
-4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow your local and deployed hostnames in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. If using Google sign-in, configure it in Supabase and add `http://localhost:3000/auth/callback` to Supabase's allowed redirect URLs.
+4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow your local and deployed hostnames in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. To enable Google sign-in and guest account linking, configure Google and enable manual identity linking in Supabase Auth. Add `http://localhost:3000/auth/callback` and your deployed callback URL to Supabase's allowed redirect URLs.
 5. Start the app:
 
    ```sh
@@ -78,6 +78,8 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
    ```
 
    Open [http://localhost:3000](http://localhost:3000). Check the database connection at `/api/health/db`.
+
+For Vercel deployments, set a long, random `CRON_SECRET` in the production environment before deploying. The scheduled job in [`vercel.json`](vercel.json) runs daily at 03:00 UTC and deletes up to 1,000 guest accounts inactive for at least 30 days per run. Without the secret, cleanup requests are rejected. The schedule runs on the production deployment; local development does not run it automatically.
 
 ### Checks
 
@@ -93,7 +95,7 @@ CI runs lint and tests on pushes to `main`/`master` and on pull requests.
 
 LearnAI sends learning goals, topic names, active tutor context, quiz content, and topic notes to Google Gemini to generate plans, explanations, summaries, and assessments. For some recall checkpoints, it may also send up to 50 recently studied topic names. Supabase stores your account's learning plan, topic progress, quiz plans and results, concept gaps, and one rolling note per topic. Full tutor conversations are not retained as chat history; submitted quiz answers are not stored as answers, though scores and feedback are.
 
-Guest access creates a Supabase anonymous user and uses Cloudflare Turnstile for bot protection. Guest data remains stored in Supabase, but access is tied to the browser session: signing out, clearing browser data, or switching devices prevents recovery. Guest accounts cannot currently be linked to Google. Review Cloudflare's data-handling terms as well.
+Guest access creates a Supabase anonymous user and uses Cloudflare Turnstile for bot protection. Guest access is tied to the browser session: signing out deletes the guest account and its progress, while clearing browser data or switching devices prevents recovery. Inactive guest accounts are eligible for scheduled deletion after 30 days. Use **Keep progress** to link a Google account before losing the session; a Google account already used with LearnAI cannot be linked or merged. Review Cloudflare's data-handling terms as well.
 
 Do not submit sensitive or confidential information. Gemini responses, generated quizzes, and grading can be inaccurate or outdated; verify important claims with reliable, current sources. Review Google's and Supabase's data-handling terms before using the app with real learner data.
 
