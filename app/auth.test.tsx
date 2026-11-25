@@ -145,6 +145,20 @@ describe("guest authentication", () => {
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["manual_linking_disabled", "Google linking is not enabled"],
+    ["identity_already_exists", "already linked to another LearnAI account"],
+  ])("explains linking error %s without deleting the guest", async (code, message) => {
+    mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });
+    mocks.linkIdentity.mockResolvedValueOnce({ error: { code } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    render(<AuthButton />);
+    fireEvent.click(await screen.findByRole("button", { name: "Keep progress" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByRole("alert")).toHaveTextContent("Your guest progress is unchanged");
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
   it("reports link callback failure to the guest", async () => {
     window.history.replaceState(null, "", "/?auth=link_error");
     mocks.getUser.mockResolvedValueOnce({ data: { user: { is_anonymous: true, user_metadata: {} } } });

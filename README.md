@@ -70,7 +70,7 @@ The core learning loop is implemented: sign-in, personal learning plans, topic m
 
 2. In `.env.local`, configure `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and `GEMINI_API_KEY`. The other settings are optional; see [`.env.example`](.env.example).
 3. Apply the SQL files in [`db/migrations`](db/migrations) in numeric order (`001` through `011`) to your Supabase database. Migrations `003` through `011` build on the earlier schema and Supabase Auth. Apply only migrations that have not already been applied.
-4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow your local and deployed hostnames in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. To enable Google sign-in and guest account linking, configure Google and enable manual identity linking in Supabase Auth. Add `http://localhost:3000/auth/callback` and your deployed callback URL to Supabase's allowed redirect URLs.
+4. In Supabase Auth, enable anonymous sign-ins and configure CAPTCHA with Cloudflare Turnstile's **secret key**. Add the public **site key** to `.env.local` and your deployment environment as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; allow `localhost` and your deployed hostname in the Turnstile widget settings. Never put the secret key in the app or a `NEXT_PUBLIC_` variable. To enable Google sign-in and guest account linking, configure Google and enable manual identity linking in Supabase Auth. In Supabase URL Configuration, allow both `http://localhost:3000/auth/callback` and `http://localhost:3000/auth/callback?link=1`, along with the corresponding deployed URLs. If a redirect URL is not allowed, Supabase may send users to the Site URL instead, where their original browser session is unavailable.
 5. Start the app:
 
    ```sh
@@ -100,6 +100,8 @@ Guest access creates a Supabase anonymous user and uses Cloudflare Turnstile for
 Do not submit sensitive or confidential information. Gemini responses, generated quizzes, and grading can be inaccurate or outdated; verify important claims with reliable, current sources. Review Google's and Supabase's data-handling terms before using the app with real learner data.
 
 App and MCP daily rate limits are tracked in memory per process and reset at UTC midnight or on restart; they are not shared across instances. Per-user limits alone do not prevent someone from creating multiple guest accounts.
+
+Gemini requests retry transient provider failures up to twice with backoff; persistent failures are reported to the learner.
 
 The optional Sentry integration sends reduced generic error events; performance tracing is disabled. Server logs include tutor failure stages, output-validation failures, and provider HTTP status codes when available, without prompts or provider messages. Supabase database connections verify TLS certificates and hostnames. If your database requires a custom CA, set `SUPABASE_DB_CA_CERT` as described in [`.env.example`](.env.example)—do not disable certificate verification.
 

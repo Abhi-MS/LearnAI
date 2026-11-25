@@ -1,5 +1,6 @@
-import { GoogleGenAI, Type, type Schema } from '@google/genai';
+import { Type, type Schema } from '@google/genai';
 import { z } from 'zod';
+import { createGeminiClient } from './gemini';
 import { MODEL, consumeTutorRequest } from './tutor';
 import { conceptsSchema, quizGradesSchema, quizQuestionsSchema, type QuizQuestions } from './types/quiz';
 import type { Level } from './levels';
@@ -32,7 +33,7 @@ async function generate(userId: string, instruction: string, contents: unknown, 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
   consumeTutorRequest(userId);
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGeminiClient(apiKey);
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: JSON.stringify(contents),

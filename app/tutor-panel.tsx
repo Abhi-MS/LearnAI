@@ -9,12 +9,13 @@ import { savedTopicNoteSchema, type SavedTopicNote } from "../lib/types/topic-no
 import { fetchTopicNote } from "../lib/topic-note-client";
 import SocraticGraph from "./socratic-graph";
 import QuizPanel from "./quiz-panel";
+import ErrorToast from "./error-toast";
 
 const MAX_QUESTION_LENGTH = 500;
 
 type Message =
   | { role: "tutor"; payload: SocraticPayload }
-  | { role: "user" | "error"; text: string };
+  | { role: "user"; text: string };
 
 type TutorRequest = { topicId: string; level: Level; mode: "lesson" | "chat"; question?: string; history: TutorHistory };
 export type TutorPanelHandle = { prepareToLeave: () => Promise<boolean> };
@@ -63,6 +64,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
   const [history, setHistory] = useState<TutorHistory>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tutorError, setTutorError] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [savedNote, setSavedNote] = useState<SavedTopicNote | null>(null);
@@ -78,6 +80,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
 
   async function load(request: TutorRequest, userText?: string) {
     setLoading(true);
+    setTutorError("");
     if (userText) {
       setMessages((m) => [...m, { role: "user", text: userText }]);
       setHistory((previous) => [...previous, { role: "user", text: userText }]);
@@ -88,10 +91,7 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
       setMessages((m) => [...m, { role: "tutor", payload }]);
       setHistory((previous) => [...previous, { role: "tutor", payload }]);
     } catch (error) {
-      setMessages((m) => [
-        ...m,
-        { role: "error", text: error instanceof Error ? error.message : "Tutor unavailable right now." },
-      ]);
+      setTutorError(error instanceof Error ? error.message : "Tutor unavailable right now.");
     } finally {
       setLoading(false);
     }
@@ -239,14 +239,14 @@ const TutorPanel = forwardRef<TutorPanelHandle, {
               <p><strong>Next step:</strong> {savedNote.nextStep}</p>
             </details>
           )}
-          {noteError && <div className="topic-note-error" role="alert">{noteError} <button type="button" className="chip-button" onClick={() => topicId && loadNote(topicId)}>Retry loading notes</button></div>}
+          {tutorError && <ErrorToast message={tutorError} />}
+          {noteError && <ErrorToast message={noteError}><button type="button" className="chip-button" onClick={() => topicId && loadNote(topicId)}>Retry loading notes</button></ErrorToast>}
           {savingNote && <p className="status" role="status">Saving topic note…</p>}
           {saveError && (
-            <div className="topic-note-error" role="alert">
-              <p>{saveError}</p>
+            <ErrorToast message={saveError}>
               {onRetryLeave && <button type="button" className="chip-button" onClick={onRetryLeave}>Retry saving and leave</button>}
               {onDiscardLeave && <button type="button" className="chip-button" onClick={onDiscardLeave}>Leave without saving</button>}
-            </div>
+            </ErrorToast>
           )}
           <div className="messages" aria-live="polite">
             {messages.map((m, i) => (

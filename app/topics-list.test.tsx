@@ -124,6 +124,15 @@ describe("learning plan", () => {
     expect(await screen.findByRole("heading", { name: "Custom" })).toBeInTheDocument();
   });
 
+  it("shows a repeated loading failure after dismissing its toast", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(failed("Unavailable.")));
+    render(<TopicsList />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unavailable.");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss error" }));
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unavailable.");
+  });
+
   it("adds a separate exploration and switches back without mixing categories", async () => {
     const music = { id: "area-2", name: "Music", categories: [{ id: "2", name: "Theory", topics: [{ id: "m", title: "Rhythm", hasNote: false, level: "Beginner", completed: false }] }] };
     const fetchMock = vi.fn().mockResolvedValueOnce(ok(plan))

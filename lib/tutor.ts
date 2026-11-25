@@ -1,6 +1,7 @@
-import { GoogleGenAI, Type, type Schema } from '@google/genai';
+import { Type, type Schema } from '@google/genai';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { createGeminiClient } from './gemini';
 import { createDailyLimiter, createKeyedDailyLimiter } from './limiter';
 import { MAX_TOPIC_LENGTH } from './topic-limits';
 import { diagramAssessmentSchema, tutorResponseSchema, type SocraticPayload, type TutorHistory } from './types/socratic';
@@ -116,10 +117,7 @@ export async function askTutor(input: {
 
   consumeTutorRequest(input.userId);
 
-  const ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: { retryOptions: { attempts: 3, httpStatusCodes: [503] } },
-  });
+  const ai = createGeminiClient(apiKey);
   const previousTopics = isLesson ? [] : input.previousTopics ?? [];
   const checkpointAllowed = !isLesson && canAskCheckpoint(input.history ?? []);
   const contents = JSON.stringify({
@@ -239,7 +237,7 @@ export async function summarizeTopic(input: {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
   consumeTutorRequest(input.userId);
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGeminiClient(apiKey);
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: JSON.stringify({
@@ -282,7 +280,7 @@ export async function assessDiagram(input: {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
   consumeTutorRequest(input.userId);
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGeminiClient(apiKey);
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: JSON.stringify({

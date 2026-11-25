@@ -402,6 +402,84 @@ h3 {
   color: #9c3e36;
 }
 
+.toast-viewport {
+  position: fixed;
+  z-index: 1000;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.toast-host {
+  display: contents;
+}
+
+.error-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #d6aaa2;
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(48, 39, 31, 0.2);
+  pointer-events: auto;
+}
+
+.error-toast-icon {
+  display: grid;
+  flex: 0 0 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #9c3e36;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.error-toast-content {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.error-toast-content p {
+  margin: 0;
+}
+
+.error-toast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.error-toast-dismiss {
+  flex: none;
+  padding: 0 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.error-toast-dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.5;
@@ -651,8 +729,7 @@ body {
   box-shadow: 0 8px 24px rgba(48, 39, 31, 0.14);
 }
 
-.topic-notes,
-.topic-note-error {
+.topic-notes {
   padding: 0.6rem 1.25rem;
   border-bottom: 1px solid var(--border);
   overflow-wrap: anywhere;
@@ -666,10 +743,6 @@ body {
 
 .topic-notes summary {
   cursor: pointer;
-}
-
-.topic-note-error .chip-button {
-  margin-right: 0.5rem;
 }
 
 .quiz-panel {
@@ -967,12 +1040,6 @@ body {
 .bubble-user {
   align-self: flex-end;
   background: #eee5d9;
-}
-
-.bubble-error {
-  align-self: flex-start;
-  background: #f7ebe6;
-  color: #9c3e36;
 }
 
 .typing {

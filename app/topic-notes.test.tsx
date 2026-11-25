@@ -139,7 +139,10 @@ it("reports a notes error, retries, and shows when no note exists", async () => 
   render(<TopicsList />);
   fireEvent.click(await screen.findByRole("button", { name: "Notes for Water" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Notes unavailable.");
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  const retry = screen.getByRole("button", { name: "Retry" });
+  fireEvent.pointerDown(retry);
+  expect(screen.getByRole("dialog", { name: "Notes for Water" })).toBeVisible();
+  fireEvent.click(retry);
   expect(await screen.findByText("No saved notes yet.")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Close notes" }));
   fireEvent.click(screen.getByRole("button", { name: "Notes for Water" }));

@@ -1,5 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
+import { createGeminiClient } from './gemini';
 import { MAX_CATEGORY_LENGTH, MAX_TOPIC_LENGTH } from './topic-limits';
 
 const generatedSchema = z.object({
@@ -26,7 +26,7 @@ export async function generateLearningCategories(goal: string) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGeminiClient(apiKey);
   const response = await ai.models.generateContent({
     model: process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite',
     contents: `Learning goal: ${JSON.stringify(goal)}`,

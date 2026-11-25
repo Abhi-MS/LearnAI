@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Level } from "../lib/levels";
 import { conceptsSchema, levelSchema, quizResultSchema, type QuizResult } from "../lib/types/quiz";
 import type { SocraticPayload } from "../lib/types/socratic";
+import ErrorToast from "./error-toast";
 
 const planSchema = z.object({ id: z.uuid(), level: levelSchema, concepts: conceptsSchema });
 const questionSchema = z.object({
@@ -107,10 +108,9 @@ export default function QuizPanel({ topicId, level, completed, coverage, onProgr
           {collapsed ? "Open quiz" : "×"}
         </button>
       </div>
-      {collapsed && error && <p className="status status-error" role="alert">{error}</p>}
+      {error && <ErrorToast message={error} />}
       {collapsed && !error && result && <p className="status" role="status">Quiz result ready.</p>}
       <div id={contentId} hidden={collapsed}>
-      {error && <p className="status status-error" role="alert">{error}</p>}
       {!plan && !error && <p className="status">Preparing a quiz plan…</p>}
       {!plan && error && <button type="button" className="chip-button" onClick={() => setRetry((value) => value + 1)}>Retry quiz plan</button>}
       {plan && !attempt && (

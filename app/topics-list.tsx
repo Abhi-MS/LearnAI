@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import TutorPanel, { type TutorPanelHandle } from "./tutor-panel";
 import AuthButton from "./auth-button";
 import TopicNotesPreview from "./topic-notes-preview";
+import ErrorToast from "./error-toast";
 import { LEVELS, type Level } from "../lib/levels";
 import { MAX_CATEGORY_LENGTH, MAX_LEARNING_GOAL_LENGTH, MAX_TOPIC_LENGTH } from "../lib/topic-limits";
 
@@ -97,6 +98,7 @@ export default function TopicsList() {
   }
 
   async function loadPlan() {
+    setLoadError("");
     try {
       const data = await readResponse(await fetch("/api/learning"));
       setPlan(data);
@@ -265,7 +267,7 @@ export default function TopicsList() {
             {plan.areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
             <option value="add">+ Add exploration</option>
           </select>
-          {switchError && <p className="status status-error" role="alert">{switchError}</p>}
+          {switchError && <ErrorToast message={switchError} />}
         </div>
       )}
       <AuthButton onLeaveRequest={(action) => { void requestLeave(action); }} />
@@ -273,7 +275,7 @@ export default function TopicsList() {
   );
 
   if (loadError) {
-    return <>{navigation}<div><p className="status status-error" role="alert">{loadError}</p><button className="primary" type="button" onClick={loadPlan}>Try again</button></div></>;
+    return <>{navigation}<ErrorToast message={loadError} /><div><button className="primary" type="button" onClick={loadPlan}>Try again</button></div></>;
   }
 
   if (!plan) return <>{navigation}<div className="track-grid" aria-busy="true"><div className="card skeleton" /><div className="card skeleton" /><div className="card skeleton" /></div></>;
@@ -289,7 +291,7 @@ export default function TopicsList() {
         <form className="custom-topic-form onboarding-form" onSubmit={generatePlan}>
           <label htmlFor="learning-goal">Your industry or learning goal</label>
           <input id="learning-goal" placeholder="e.g. photography, healthcare, or personal finance" value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={MAX_LEARNING_GOAL_LENGTH} disabled={generating} required />
-          {onboardingError && <p className="status status-error" role="alert">{onboardingError}</p>}
+          {onboardingError && <ErrorToast message={onboardingError} />}
           <button type="submit" className="primary" disabled={generating}>{generating ? "Creating your learning plan..." : "Create my learning plan"}</button>
           {activeArea && <button type="button" className="chip-button" disabled={generating} onClick={() => { setAddingArea(false); setOnboardingError(""); setGoal(""); }}>Cancel</button>}
         </form>
@@ -326,7 +328,7 @@ export default function TopicsList() {
                   <input id="custom-topic-new-category" placeholder="Enter a category name" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={MAX_CATEGORY_LENGTH} disabled={saving || switching} required />
                 </>
               )}
-              {formError && <p className="status status-error" role="alert">{formError}</p>}
+              {formError && <ErrorToast message={formError} />}
               {success && <p className="custom-topic-success" role="status">{success}</p>}
               <button type="submit" className="primary" disabled={saving || deleting || switching}>{saving ? "Adding..." : "Add topic"}</button>
             </form>
@@ -361,7 +363,7 @@ export default function TopicsList() {
               {confirmDelete?.id === item.id && (
                 <div className="delete-confirmation" role="group" aria-labelledby={`delete-title-${item.id}`}>
                   <p id={`delete-title-${item.id}`}>Delete {item.name}, all its topics, saved notes, and quiz progress permanently?</p>
-                  {deleteError && <p className="status status-error" role="alert">{deleteError}</p>}
+                  {deleteError && <ErrorToast message={deleteError} />}
                   <div className="delete-actions">
                     <button type="button" className="chip-button" disabled={deleting} onClick={() => setConfirmDelete(null)}>Cancel</button>
                     <button type="button" className="primary" disabled={deleting || switching} onClick={deleteCategory}>{deleting ? "Deleting..." : "Delete category"}</button>

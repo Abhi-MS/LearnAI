@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { createSupabaseBrowserClient } from "../lib/supabase-browser";
+import ErrorToast from "./error-toast";
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => createSupabaseBrowserClient());
@@ -116,13 +117,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               onError={() => { setCaptchaToken(""); setCaptchaError("Verification failed to load or complete. Please try again."); }}
               onUnsupported={() => { setCaptchaToken(""); setCaptchaError("Verification is not supported in this browser."); }}
             />
-            {captchaError && <p className="status status-error" role="alert">{captchaError}</p>}
+            {captchaError && <ErrorToast message={captchaError} />}
             <button type="button" className="primary" disabled={!captchaToken || signingIn} onClick={() => { void signInAsGuest(); }}>
               {signingIn ? "Starting guest session..." : "Continue as guest"}
             </button>
           </>
         ) : (
-          <p className="status status-error" role="alert">Guest access is unavailable: CAPTCHA is not configured.</p>
+          <ErrorToast message="Guest access is unavailable: CAPTCHA is not configured." />
         )}
         <button
           type="button"
@@ -132,10 +133,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         >
           Sign in with Google
         </button>
-        {authError && <p className="status status-error" role="alert">{authError}</p>}
+        {authError && <ErrorToast message={authError} />}
       </main>
     );
   }
 
-  return <>{activityError && <p className="status status-error" role="alert">{activityError}</p>}{children}</>;
+  return <>{activityError && <ErrorToast message={activityError} />}{children}</>;
 }

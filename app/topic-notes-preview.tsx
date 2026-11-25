@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { fetchTopicNote } from "../lib/topic-note-client";
 import type { SavedTopicNote } from "../lib/types/topic-note";
+import ErrorToast from "./error-toast";
 
 type NoteState =
   | { status: "loading" }
@@ -51,7 +52,8 @@ export default function TopicNotesPreview({
       }
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) onClose();
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target) &&
+          !(event.target instanceof Element && event.target.closest("[data-toast-viewport]"))) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown);
@@ -86,10 +88,9 @@ export default function TopicNotesPreview({
           </div>
           {state.status === "loading" && <p role="status">Loading notes…</p>}
           {state.status === "error" && (
-            <div role="alert">
-              <p>{state.message}</p>
+            <ErrorToast message={state.message}>
               <button type="button" className="chip-button" onClick={() => setAttempt((value) => value + 1)}>Retry</button>
-            </div>
+            </ErrorToast>
           )}
           {state.status === "loaded" && (state.note ? (
             <>

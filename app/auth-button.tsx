@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "../lib/supabase-browser";
+import ErrorToast from "./error-toast";
 
 export default function AuthButton({ onLeaveRequest }: { onLeaveRequest?: (action: () => void) => void }) {
   const [supabase] = useState(() => createSupabaseBrowserClient());
@@ -91,11 +92,20 @@ export default function AuthButton({ onLeaveRequest }: { onLeaveRequest?: (actio
           provider: "google",
           options: { redirectTo: `${window.location.origin}/auth/callback?link=1` },
         });
-        if (error) throw error;
+        if (error) {
+          if (error.code === "manual_linking_disabled") {
+            setSignOutError("Google linking is not enabled. Contact the app administrator. Your guest progress is unchanged.");
+          } else if (error.code === "identity_already_exists") {
+            setSignOutError("This Google account is already linked to another LearnAI account and cannot be merged. Your guest progress is unchanged.");
+          } else {
+            setSignOutError("Could not link Google. Please try again. Your guest progress is unchanged.");
+          }
+          setLinking(false);
+        }
       } catch (error) {
         setSignOutError(error instanceof Error && error.message === "Could not keep your guest session active. Please try again."
           ? error.message
-          : "Could not link Google. Try again; Google accounts already used with LearnAI cannot be linked. Your guest progress is unchanged.");
+          : "Could not link Google. Please try again. Your guest progress is unchanged.");
         setLinking(false);
       }
     };
@@ -124,7 +134,7 @@ export default function AuthButton({ onLeaveRequest }: { onLeaveRequest?: (actio
           <button type="button" className="primary" onClick={requestSignOut}>Sign out anyway</button>
         </div>
       )}
-      {signOutError && <p className="status status-error" role="alert">{signOutError}</p>}
+      {signOutError && <ErrorToast message={signOutError} />}
     </div>
   );
 }
